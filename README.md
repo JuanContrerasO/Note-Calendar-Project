@@ -74,7 +74,7 @@ App for school; tell the app your schedule & after the class is over, pops up as
 
 ## Languages used
 
-C++ and C
+SwiftUI
 
 ## IDE
 
