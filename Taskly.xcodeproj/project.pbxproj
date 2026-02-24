@@ -24,13 +24,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0693E6482F4D5A9E0086603A /* Taskly.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Taskly.xcodeproj; sourceTree = "<group>"; };
 		8971B0452F35593400907829 /* Taskly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Taskly.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8971B0562F35593500907829 /* TasklyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TasklyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8971B0602F35593500907829 /* TasklyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TasklyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		8971B0682F35593500907829 /* Exceptions for "Taskly" folder in "Taskly" target */ = {
+		06F016722F4D5EA000C4A54A /* Exceptions for "Taskly" folder in "Taskly" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -43,7 +44,7 @@
 		8971B0472F35593400907829 /* Taskly */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				8971B0682F35593500907829 /* Exceptions for "Taskly" folder in "Taskly" target */,
+				06F016722F4D5EA000C4A54A /* Exceptions for "Taskly" folder in "Taskly" target */,
 			);
 			path = Taskly;
 			sourceTree = "<group>";
@@ -85,6 +86,11 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0693E64A2F4D5A9E0086603A /* Products */ = {
+			isa = PBXGroup;
+			name = Products;
+			sourceTree = "<group>";
+		};
 		8971B03C2F35593400907829 = {
 			isa = PBXGroup;
 			children = (
@@ -211,6 +217,12 @@
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8971B0462F35593400907829 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 0693E64A2F4D5A9E0086603A /* Products */;
+					ProjectRef = 0693E6482F4D5A9E0086603A /* Taskly.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				8971B0442F35593400907829 /* Taskly */,
