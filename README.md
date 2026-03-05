@@ -20,12 +20,18 @@ A barebone iOS app for note-taking and task scheduling built with SwiftUI.
 ## File Structure
 
 ```
-NotesCalendarApp/
-├── NotesCalendarApp.swift    # Main app entry point
-├── ContentView.swift          # Tab view container
-├── Models.swift              # Data models (Note, Task)
-├── NotesView.swift           # Notes list and creation
-└── CalendarView.swift        # Calendar and task management
+## File Structure
+
+Taskly/
+├── TasklyApp.swift            # SwiftData configuration
+├── ContentView.swift          # Main tabs (adaptive)
+├── Models.swift               # Models: Note, TaskItem DrawingNote, Course
+├── NotesView.swift            # Text notes management
+├── CalendarView.swift         # Calendar with EventKit integration
+├── CalendarManager.swift      # Calendar access management
+├── DrawingNotesView.swift     # Drawn notes with PencilKit
+├── CanvasView.swift           # Custom view for PencilKit
+└── ScheduleView.swift         # Course schedule management
 ```
 
 ## Requirements
