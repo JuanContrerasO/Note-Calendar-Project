@@ -84,7 +84,7 @@ struct CalendarView: View {
             }) {
                 AddTaskView(selectedDate: selectedDate, calendarManager: calendarManager)
                     .presentationDetents([.medium, .large])
-                    .presentationDetents(.visible)   
+                    .presentationDragIndicator(.visible)   
             }
             .onAppear {
                 Task {
