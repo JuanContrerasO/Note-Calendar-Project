@@ -43,6 +43,8 @@ struct ScheduleView: View {
             }
             .sheet(isPresented: $showingAddCourse) {
                 AddCourseView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
     }

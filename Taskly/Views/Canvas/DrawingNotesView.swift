@@ -36,6 +36,8 @@ struct DrawingNotesView: View {
             }
             .sheet(isPresented: $showingAddDrawing) {
                 AddDrawingView()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
         }
     }

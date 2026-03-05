@@ -71,7 +71,7 @@ struct CalendarView: View {
                 
                 //The list can use either more or less space depending on the device
                 .listStyle(InsetGroupedListStyle())
-                
+
             }
             .navigationTitle("Calendar")
             .toolbar {
@@ -83,6 +83,8 @@ struct CalendarView: View {
                 calendarManager.fetchEvents(for: selectedDate)
             }) {
                 AddTaskView(selectedDate: selectedDate, calendarManager: calendarManager)
+                    .presentationDetents([.medium, .large])
+                    .presentationDetents(.visible)   
             }
             .onAppear {
                 Task {

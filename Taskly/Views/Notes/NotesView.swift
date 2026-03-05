@@ -44,6 +44,10 @@ struct NotesView: View {
             }
             .sheet(isPresented: $showingAddNote) {
                 AddNoteView()
+
+                    //Allows the resizing of the sheet
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
