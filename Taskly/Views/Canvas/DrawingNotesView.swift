@@ -96,6 +96,7 @@ struct DrawingCanvasView: View {
 
     var body: some View {
         CanvasView(canvasView: $canvasView, toolPickerIsActive: $toolPickerIsActive)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle(drawingNote.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
