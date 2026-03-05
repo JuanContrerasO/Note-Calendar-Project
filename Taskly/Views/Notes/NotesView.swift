@@ -65,13 +65,32 @@ struct AddNoteView: View {
     @State private var title = ""
     @State private var content = ""
 
+    //Add focus state for the two fields
+    @FocusState private var focusedField: Field?
+
+    enum Field {
+        case title, content
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 TextField("Title", text: $title)
+                    .focused($focusedField, equals: .title) //Bind focus
+                    .submitLabel(.next) //"Next" on keyboard
+                    .onSubmit {
+                        focusedField = .content //Move to content when Next is tapped
+                    }
+
                 TextEditor(text: $content)
+                    .focused($focusedField, equals: .content)
                     .frame(minHeight: 200)
+                    .submitLabel(.done) //"Done" on keyboard
+                    .onSubmit {
+                        focusedField = nil //Dismiss keyboard when Done tappped
+                    }
             }
+            .scrollDismissesKeyboard(.interactively) //Allow tapping outside to dismiss keyboard
             .navigationTitle("New Note")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -84,6 +103,13 @@ struct AddNoteView: View {
                         dismiss()
                     }
                     .disabled(title.isEmpty)
+                }
+                //Add a keyboard toolbar with a "Done" button
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        focusedField = nil //Dismiss keyboard
+                    }
                 }
             }
         }
