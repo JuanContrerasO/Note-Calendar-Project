@@ -48,6 +48,10 @@ struct ContentView: View {
                         .buttonStyle(.borderedProminent)
                     }
                     .padding()
+
+                    //For ipad (and other devices): the sheet displays in medium or large sizes dependig on the device being used
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
                 }
            
             
