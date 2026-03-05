@@ -15,6 +15,10 @@ struct CalendarView: View {
                 DatePicker("Select Date", selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .padding()
+                    //Expands to full available width
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(10)
 
                 if let errorMessage = calendarManager.errorMessage {
                     Text(errorMessage)
@@ -64,6 +68,10 @@ struct CalendarView: View {
                         .onDelete(perform: deleteTask)
                     }
                 }
+                
+                //The list can use either more or less space depending on the device
+                .listStyle(InsetGroupedListStyle())
+                
             }
             .navigationTitle("Calendar")
             .toolbar {
