@@ -4,7 +4,9 @@ Taskly is a SwiftUI productivity app that combines notes, drawing, calendar task
 
 ## Features
 
-- Notes: create, view, and delete text notes
+- Notes: create, view, edit, and delete text notes
+- Folders: organize notes into folders with colors and expand/collapse lists
+- Drag and drop: move notes into folders by dragging
 - Drawings: create and save PencilKit drawings
 - Calendar: add tasks by date/time and optionally save them to the system calendar
 - Events: view system calendar events for a selected day
@@ -19,7 +21,10 @@ Note: Some UI styles may require newer OS versions depending on deployment targe
 
 ## Usage
 
-- Notes tab: tap "+" to create a note, swipe left to delete
+- Notes tab: tap "+" to create a note or folder
+- Folders: tap to expand/collapse, drag notes onto a folder to file them
+- Edit mode: tap Edit, then tap a note or folder to edit
+- Swipe left to delete notes or folders
 - Draw tab: tap "+" to create a new drawing
 - Calendar tab: pick a date, add tasks, and toggle completion
 - Schedule tab: add courses with days and times
