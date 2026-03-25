@@ -1,87 +1,58 @@
-# Notes & Calendar App
+# Taskly
 
-A barebone iOS app for note-taking and task scheduling built with SwiftUI.
+Taskly is a SwiftUI productivity app that combines notes, drawing, calendar tasks, and course schedules in one place.
 
 ## Features
 
-### Notes
-- Create, view, and delete notes
-- Each note has a title, content, and creation date
-- Simple list view with navigation
-
-### Calendar
-- Create, view, and delete tasks
-- Mark tasks as complete/incomplete
-- Interactive calendar date picker
-- Tasks filtered by selected date
-- Time-based scheduling
-
-
-## File Structure
-
-```
-## File Structure
-
-Taskly/
-├── TasklyApp.swift            # SwiftData configuration
-├── ContentView.swift          # Main tabs (adaptive)
-├── Models.swift               # Models: Note, TaskItem DrawingNote, Course
-├── NotesView.swift            # Text notes management
-├── CalendarView.swift         # Calendar with EventKit integration
-├── CalendarManager.swift      # Calendar access management
-├── DrawingNotesView.swift     # Drawn notes with PencilKit
-├── CanvasView.swift           # Custom view for PencilKit
-└── ScheduleView.swift         # Course schedule management
-```
+- Notes: create, view, edit, and delete text notes
+- Folders: organize notes into folders with colors and expand/collapse lists
+- Drag and drop: move notes into folders by dragging
+- Drawings: create and save PencilKit drawings
+- Calendar: add tasks by date/time and optionally save them to the system calendar
+- Events: view system calendar events for a selected day
+- Schedule: create and manage course schedules
 
 ## Requirements
 
-- iOS 15.0+
-- Xcode 14.0+
-- Swift 5.7+
+- iOS 17+ (SwiftData)
+- Xcode 15+
+
+Note: Some UI styles may require newer OS versions depending on deployment target.
 
 ## Usage
 
-### Notes Tab
-- Tap "+" to create a new note
-- Tap on a note to view its details
-- Swipe left on a note to delete
+- Notes tab: tap "+" to create a note or folder
+- Folders: tap to expand/collapse, drag notes onto a folder to file them
+- Edit mode: tap Edit, then tap a note or folder to edit
+- Swipe left to delete notes or folders
+- Draw tab: tap "+" to create a new drawing
+- Calendar tab: pick a date, add tasks, and toggle completion
+- Schedule tab: add courses with days and times
 
-### Calendar Tab
-- Select a date from the calendar picker
-- Tap "+" to create a new task for that date
-- Tap the circle to mark tasks as complete
-- Swipe left on a task to delete
+## Data and Permissions
 
-## Note
+- Local data is stored using SwiftData
+- Calendar integration uses EventKit and requires user permission
 
-This is a barebone implementation. Data is not persisted between app launches. To add persistence, consider implementing UserDefaults, Core Data, or SwiftData.
+## Project Structure
 
+```
+Taskly/
+├── App/TasklyApp.swift
+├── Models/Models.swift
+├── Views/
+│   ├── ContentView.swift
+│   ├── Notes/NotesView.swift
+│   ├── Calendar/CalendarView.swift
+│   ├── Calendar/CalendarManager.swift
+│   ├── Canvas/CanvasView.swift
+│   ├── Canvas/DrawingNotesView.swift
+│   └── Schedule/ScheduleView.swift
+├── Assets.xcassets
+├── Info.plist
+└── Taskly.entitlements
+```
 
-## TODO
+## License
 
--- IMPLEMENT MSGS VIEW. 
--- research feasible & low cost 
-
--- implment add courses tab 
---create classes for "classes"
-
-
-#IMPORTANT CLASSIFIERS 
-
-
-# TASKLY: ios task productivity manager - Team 12
-
-A productivity app for ios. Developed by Ava Saltzman, Juan Renteria, and Juan Contreras.
-
-## Project Description
-
-App for school; tell the app your schedule & after the class is over, pops up asking if there's any homework & if so, when it is due. Will remind of homework 2 days before it was set/due for. Another feature includes note taking, specifically for Ipad apple pencil, but also works for phone with textbox, etc.
-
-## Languages used
-
-SwiftUI
-
-## IDE
-
-
+See `LICENSE`.
