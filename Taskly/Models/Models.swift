@@ -3,15 +3,33 @@ import SwiftData
 import PencilKit
 
 @Model
+final class Folder {
+    var name: String
+    var createdAt: Date
+    var colorName: String
+    @Relationship var notes: [Note] = []
+
+    init(name: String, createdAt: Date, colorName: String = "blue") {
+        self.name = name
+        self.createdAt = createdAt
+        self.colorName = colorName
+    }
+}
+
+@Model
 final class Note {
+    @Attribute(.unique) var id: UUID
     var title: String
     var content: String
     var createdAt: Date
+    @Relationship(inverse: \Folder.notes) var folder: Folder?
 
-    init(title: String, content: String, createdAt: Date) {
+    init(title: String, content: String, createdAt: Date, folder: Folder? = nil) {
+        self.id = UUID()
         self.title = title
         self.content = content
         self.createdAt = createdAt
+        self.folder = folder
     }
 }
 

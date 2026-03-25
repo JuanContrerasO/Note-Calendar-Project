@@ -12,6 +12,7 @@ import SwiftData
 struct TasklyApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
+            Folder.self,
             Note.self,
             TaskItem.self,
             DrawingNote.self,
