@@ -97,7 +97,7 @@ class CalendarManager {
                 var components = calendar.dateComponents([.year, .month, .day], from: candidate)
                 components.hour = timeComponents.hour
                 components.minute = timeComponents.minute
-                if let startDate = calendar.date(from: components), startDate > now {
+                if let startDate = calendar.date(from: components), startDate >= now {
                     nextStartDate = startDate
                     break
                 }
