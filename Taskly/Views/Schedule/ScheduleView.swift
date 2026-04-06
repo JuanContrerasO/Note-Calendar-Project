@@ -5,6 +5,7 @@ struct ScheduleView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var courses: [Course]
     @State private var showingAddCourse = false
+    @State private var calendarManager = CalendarManager()
 
     var body: some View {
         NavigationStack {
@@ -47,10 +48,17 @@ struct ScheduleView: View {
                 .presentationDragIndicator(.visible)
             }
         }
+        .environment(calendarManager)
     }
 
     func deleteCourse(at offsets: IndexSet) {
         for index in offsets {
+            let course = courses[index]
+            if course.calendarEventID != nil {
+                Task {
+                    try? await calendarManager.deleteEvent(for: course)
+                }
+            }
             modelContext.delete(courses[index])
         }
     }
@@ -65,8 +73,12 @@ struct AddCourseView: View {
     @State private var startTime = Date()
     @State private var endTime = Date()
     @State private var selectedDays: Set<String> = []
+    @State private var syncToCalendar = false
+    @State private var isShowingError = false
+    @State private var errorMessage = ""
 
     let daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    @Environment(CalendarManager.self) private var calendarManager
 
     var body: some View {
         NavigationStack {
@@ -103,6 +115,9 @@ struct AddCourseView: View {
                     DatePicker("Start Time", selection: $startTime, displayedComponents: .hourAndMinute)
                     DatePicker("End Time", selection: $endTime, displayedComponents: .hourAndMinute)
                 }
+                section {
+                    Toggle("Sync to Calendar", isOn: $syncToCalendar)
+                }
             }
             .navigationTitle("New Course")
             .toolbar {
@@ -110,21 +125,46 @@ struct AddCourseView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let sortedDays = daysOfWeek.filter { selectedDays.contains($0) }
-                        let daysString = sortedDays.joined(separator: ", ")
-                        let course = Course(
-                            name: name,
-                            instructor: instructor,
-                            location: location,
-                            daysOfWeek: daysString,
-                            startTime: startTime,
-                            endTime: endTime
-                        )
-                        modelContext.insert(course)
-                        dismiss()
-                    }
-                    .disabled(name.isEmpty || selectedDays.isEmpty)
+                    Button("Save") { saveCourse() }
+                        .disabled(name.isEmpty || selectedDays.isEmpty)
+                }
+            }
+            .alert("Error", isPresented: $isShowingError) {
+                Button("OK") { }
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+
+    private func saveCourse() {
+        let sortedDays = daysOfWeek.filter { selectedDays.contains($0) }
+        let daysString = sortedDays.joined(separator: ", ")
+        let course = Course(
+            name: name,
+            instructor: instructor,
+            location: location,
+            daysOfWeek: daysString,
+            startTime: startTime,
+            endTime: endTime
+        )
+        modelContext.insert(course)
+
+        guard syncToCalendar else { dismiss(); return}
+        
+
+        Task {
+            do {
+                try await calendarManager.requestAccess()
+                let eventID = try await calendarManager.createEvent(for: course)
+                await MainActor.run {
+                    course.calendarEventID = eventID
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Failed to sync: \(error.localizedDescription)"
+                    isShowingError = true
                 }
             }
         }
@@ -133,6 +173,16 @@ struct AddCourseView: View {
 
 struct CourseDetailView: View {
     let course: Course
+    @Environment(calendarManager.self) private var calendarManager
+    @State private var syncEnabled: Bool
+    @State private var isShowingError = false
+    @State private var errorMessage = ""
+    @State private var isSyncing = false
+
+    init(course: Course) {
+        self.course = course
+        _syncEnabled = State(initialValue: course.calendarEventID != nil)
+    }
 
     var body: some View {
         List {
@@ -152,8 +202,65 @@ struct CourseDetailView: View {
                     Text(course.endTime, style: .time)
                 }
             }
+            Section {
+                Toggle("Sync to Calendar", isOn: $syncEnabled)
+                    .onChange(of: syncEnabled) { _, newValue in
+                        Task { await toggleSync(enable: newValue)}
+                    }
+                if syncEnabled && course.calendarEventID != nil {
+                    Button("Force Re-Sync", role: .none) {
+                        Task { await forceResync() }
+                    }
+                    .disabled(isSyncing)
+                }
+            }
         }
         .navigationTitle(course.name)
         .navigationBarTitleDisplayMode(.inline)
+        .aler("Error", isPresented: $isShowingError) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
+        .overlay { if isSyncing { ProgressView() } }
+    }
+
+    private func toggleSync(enable: Bool) async {
+        isSyncing = true
+        defer { isSyncing = false }
+        do {
+            try await calendarManager.requestAccess()
+            if enable {
+                if course.calendarEventID == nil {
+                    let eventID = try await calendarManager.createEvent(for: course)
+                    await MainActor.run { course.calendarEventID = eventID }
+                }
+            } else {
+                if course.calendarEventID != nil {
+                    try await calendarManager.deleteEvent(for: course)
+                    await MainActor.run { course.calendarEventID = nil }
+                }
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                isShowingError = true
+                syncEnabled = course.calendarEventID != nil
+            }
+        }
+    }
+
+    private func forceResync() async {
+        isSyncing = true
+        defer { isSyncing = false }
+        do {
+            let newEventID = try await calendarManager.updateEvent(for: course)
+            await MainActor.run { course.calendarEventID = newEventID }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                isShowingError = true
+            }
+        }
     }
 }
