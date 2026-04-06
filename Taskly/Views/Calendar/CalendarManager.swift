@@ -58,8 +58,6 @@ class CalendarManager {
         try eventStore.save(event, span: .thisEvent)
     }
 
-    // MARK: - Course Calendar Integration
-
     func createEvent(for course: Course) async throws -> String {
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
             throw CalendarError.noAccess
@@ -95,7 +93,7 @@ class CalendarManager {
             guard let candidate = calendar.date(byAdding: .day, value: daysToAdd, to: now) else { continue }
             let weekday = calendar.component(.weekday, from: candidate)
             let ekWeekday = EKWeekday(rawValue: weekday)
-            if daysArray.contains(ekWeekday) {
+            if let ekWeekday = ekWeekday, daysArray.contains(ekWeekday) {
                 var components = calendar.dateComponents([.year, .month, .day], from: candidate)
                 components.hour = timeComponents.hour
                 components.minute = timeComponents.minute
@@ -119,7 +117,7 @@ class CalendarManager {
             daysOfTheWeek: ekDays,
             daysOfTheMonth: nil,
             monthsOfTheYear: nil,
-            weeksOfTheYear: nil,      // 👈 Required parameter
+            weeksOfTheYear: nil,
             daysOfTheYear: nil,
             setPositions: nil,
             end: nil

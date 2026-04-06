@@ -56,7 +56,7 @@ private struct WelcomeSheetView: View {
                 Button("Get Started") {
                     isPresented = false
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.borderedProminent)
             }
             .padding()
         }

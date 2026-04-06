@@ -21,162 +21,122 @@ struct NotesView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if !sortedFolders.isEmpty {
-                    Section("Folders") {
-                        ForEach(sortedFolders) { folder in
-                            let folderNotes = sortedNotes(in: folder)
-                            VStack(spacing: 0) {
-                                folderRow(folder, notes: folderNotes)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        if isEditing {
-                                            selectedFolderForActions = folder
-                                            showingFolderActions = true
-                                        } else {
-                                            toggleExpanded(folder)
-                                        }
-                                    }
-                                    .onDrop(of: [UTType.text], isTargeted: nil) { providers in
-                                        handleDrop(providers, to: folder)
-                                    }
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            deleteFolder(folder)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
-
-                                if expandedFolderIDs.contains(folder.persistentModelID) {
-                                    ForEach(folderNotes) { note in
-                                        noteRow(note)
-                                            .padding(.leading, 24)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Section("Notes") {
-                    ForEach(unfiledNotes) { note in
-                        noteRow(note)
-                    }
+            mainList
+        }
+        .navigationTitle("Notes")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(isEditing ? "Done" : "Edit") {
+                    isEditing.toggle()
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(
-                Image("Image")
-                    .resizable()
-                    .scaledToFill()
-                    .opacity(0.2)
-                    .ignoresSafeArea()
-            )
-            .navigationTitle("Notes")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(isEditing ? "Done" : "Edit") {
-                        isEditing.toggle()
-                    }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: { showingAddOptions = true }) {
+                    Image(systemName: "plus")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { showingAddOptions = true }) {
-                        Image(systemName: "plus")
-                    }
-                    .buttonStyle(.glass)
-                }
+                .buttonStyle(.borderedProminent)  // ✅ fixed from .glass
             }
-            .confirmationDialog("Add", isPresented: $showingAddOptions, titleVisibility: .visible) {
-                Button("New Note") { showingAddNote = true }
-                Button("New Folder") { showingAddFolder = true }
-                Button("Cancel", role: .cancel) {}
-            }
-            .confirmationDialog("Folder Options", isPresented: $showingFolderActions, titleVisibility: .visible, presenting: selectedFolderForActions) { folder in
-                Button("Edit Folder") {
-                    folderToEdit = folder
-                }
-                Button("Cancel", role: .cancel) {}
-            }
-            .confirmationDialog("Note Options", isPresented: $showingNoteActions, titleVisibility: .visible, presenting: selectedNoteForActions) { note in
-                Button("View Note") {
-                    noteToView = note
-                }
-                Button("Edit Note") {
-                    noteToEdit = note
-                }
-                Button("Cancel", role: .cancel) {}
-            }
-            .sheet(isPresented: $showingAddNote) {
-                AddNoteView(folders: sortedFolders)
-                    //Allows the resizing of the sheet
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $showingAddFolder) {
-                AddFolderView()
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-            }
-            .sheet(item: $folderToEdit) { folder in
-                EditFolderView(folder: folder)
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-            }
-            .sheet(item: $noteToEdit) { note in
-                EditNoteView(note: note)
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-            }
-            .navigationDestination(item: $noteToView) { note in
-                NoteDetailView(note: note)
-            }
+        }
+        .confirmationDialog("Add", isPresented: $showingAddOptions, titleVisibility: .visible) {
+            Button("New Note") { showingAddNote = true }
+            Button("New Folder") { showingAddFolder = true }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Folder Options", isPresented: $showingFolderActions, titleVisibility: .visible, presenting: selectedFolderForActions) { folder in
+            Button("Edit Folder") { folderToEdit = folder }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Note Options", isPresented: $showingNoteActions, titleVisibility: .visible, presenting: selectedNoteForActions) { note in
+            Button("View Note") { noteToView = note }
+            Button("Edit Note") { noteToEdit = note }
+            Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $showingAddNote) {
+            AddNoteView(folders: sortedFolders)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingAddFolder) {
+            AddFolderView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $folderToEdit) { folder in
+            EditFolderView(folder: folder)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $noteToEdit) { note in
+            EditNoteView(note: note)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .navigationDestination(item: $noteToView) { note in
+            NoteDetailView(note: note)
         }
     }
 
-    private var sortedFolders: [Folder] {
-        folders.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
+    // MARK: - Extracted Subviews
 
-    private var unfiledNotes: [Note] {
-        notes
-            .filter { $0.folder == nil }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
-
-    private func sortedNotes(in folder: Folder) -> [Note] {
-        folder.notes.sorted { $0.createdAt > $1.createdAt }
-    }
-
-    private func toggleExpanded(_ folder: Folder) {
-        let id = folder.persistentModelID
-        if expandedFolderIDs.contains(id) {
-            expandedFolderIDs.remove(id)
-        } else {
-            expandedFolderIDs.insert(id)
-        }
-    }
-
-    private func handleDrop(_ providers: [NSItemProvider], to folder: Folder) -> Bool {
-        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
-            return false
-        }
-
-        provider.loadObject(ofClass: NSString.self) { object, _ in
-            guard let idString = object as? NSString,
-                  let noteID = UUID(uuidString: idString as String) else {
-                return
+    @ViewBuilder
+    private var mainList: some View {
+        List {
+            if !sortedFolders.isEmpty {
+                Section("Folders") {
+                    ForEach(sortedFolders) { folder in
+                        folderSection(folder)
+                    }
+                }
             }
 
-            DispatchQueue.main.async {
-                if let note = notes.first(where: { $0.id == noteID }) {
-                    note.folder = folder
-                    expandedFolderIDs.insert(folder.persistentModelID)
+            Section("Notes") {
+                ForEach(unfiledNotes) { note in
+                    noteRow(note)
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(
+            Image("Image")
+                .resizable()
+                .scaledToFill()
+                .opacity(0.2)
+                .ignoresSafeArea()
+        )
+    }
 
-        return true
+    @ViewBuilder
+    private func folderSection(_ folder: Folder) -> some View {
+        let folderNotes = sortedNotes(in: folder)
+        VStack(spacing: 0) {
+            folderRow(folder, notes: folderNotes)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if isEditing {
+                        selectedFolderForActions = folder
+                        showingFolderActions = true
+                    } else {
+                        toggleExpanded(folder)
+                    }
+                }
+                .onDrop(of: [UTType.text], isTargeted: nil) { providers in
+                    handleDrop(providers, to: folder)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        deleteFolder(folder)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+
+            if expandedFolderIDs.contains(folder.persistentModelID) {
+                ForEach(folderNotes) { note in
+                    noteRow(note)
+                        .padding(.leading, 24)
+                }
+            }
+        }
     }
 
     private func folderRow(_ folder: Folder, notes: [Note]) -> some View {
@@ -240,6 +200,51 @@ struct NotesView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+
+    // MARK: - Helper Properties & Functions
+
+    private var sortedFolders: [Folder] {
+        folders.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private var unfiledNotes: [Note] {
+        notes
+            .filter { $0.folder == nil }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func sortedNotes(in folder: Folder) -> [Note] {
+        folder.notes.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func toggleExpanded(_ folder: Folder) {
+        let id = folder.persistentModelID
+        if expandedFolderIDs.contains(id) {
+            expandedFolderIDs.remove(id)
+        } else {
+            expandedFolderIDs.insert(id)
+        }
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider], to folder: Folder) -> Bool {
+        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
+            return false
+        }
+
+        provider.loadObject(ofClass: NSString.self) { object, _ in
+            guard let idString = object as? NSString,
+                  let noteID = UUID(uuidString: idString as String) else { return }
+
+            DispatchQueue.main.async {
+                if let note = notes.first(where: { $0.id == noteID }) {
+                    note.folder = folder
+                    expandedFolderIDs.insert(folder.persistentModelID)
+                }
+            }
+        }
+
+        return true
     }
 
     private func deleteFolder(_ folder: Folder) {

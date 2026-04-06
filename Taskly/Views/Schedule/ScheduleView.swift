@@ -115,7 +115,7 @@ struct AddCourseView: View {
                     DatePicker("Start Time", selection: $startTime, displayedComponents: .hourAndMinute)
                     DatePicker("End Time", selection: $endTime, displayedComponents: .hourAndMinute)
                 }
-                section {
+                Section {
                     Toggle("Sync to Calendar", isOn: $syncToCalendar)
                 }
             }
@@ -155,7 +155,6 @@ struct AddCourseView: View {
 
         Task {
             do {
-                try await calendarManager.requestAccess()
                 let eventID = try await calendarManager.createEvent(for: course)
                 await MainActor.run {
                     course.calendarEventID = eventID
@@ -173,7 +172,7 @@ struct AddCourseView: View {
 
 struct CourseDetailView: View {
     let course: Course
-    @Environment(calendarManager.self) private var calendarManager
+    @Environment(CalendarManager.self) private var calendarManager
     @State private var syncEnabled: Bool
     @State private var isShowingError = false
     @State private var errorMessage = ""
@@ -217,7 +216,7 @@ struct CourseDetailView: View {
         }
         .navigationTitle(course.name)
         .navigationBarTitleDisplayMode(.inline)
-        .aler("Error", isPresented: $isShowingError) {
+        .alert("Error", isPresented: $isShowingError) {
             Button("OK") { }
         } message: {
             Text(errorMessage)
@@ -229,7 +228,6 @@ struct CourseDetailView: View {
         isSyncing = true
         defer { isSyncing = false }
         do {
-            try await calendarManager.requestAccess()
             if enable {
                 if course.calendarEventID == nil {
                     let eventID = try await calendarManager.createEvent(for: course)
