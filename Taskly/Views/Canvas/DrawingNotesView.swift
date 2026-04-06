@@ -55,6 +55,9 @@ struct AddDrawingView: View {
     @State private var title = ""
     @State private var canvasView = PKCanvasView()
     @State private var toolPickerIsActive = true
+    @State private var didPressCancel = false
+
+    @FocusState private var isTitleFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -62,6 +65,9 @@ struct AddDrawingView: View {
                 TextField("Drawing Title", text: $title)
                     .textFieldStyle(.roundedBorder)
                     .padding(.horizontal)
+                    .focused($isTitleFocused)
+                    .submitLabel(.done)
+                    .onSubmit { isTitleFocused = false }
 
                 CanvasView(canvasView: $canvasView, toolPickerIsActive: $toolPickerIsActive)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -70,31 +76,31 @@ struct AddDrawingView: View {
             }
             .navigationTitle("New Drawing")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let drawingData = canvasView.drawing.dataRepresentation()
-                        let note = DrawingNote(
-                            title: title,
-                            drawingData: drawingData,
-                            createdAt: Date()
-                        )
-                        modelContext.insert(note)
-                        dismiss()
-                    }
-                    .disabled(title.isEmpty)
+                CancelButton(didPressCancel: $didPressCancel)
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { isTitleFocused = false }
                 }
             }
+        }
+        .onDisappear {
+            guard !didPressCancel else { return }
+            let hasDrawing else { return }
+            guard hasDrawing else { return }
+            let finalTitle = title.untitledIfEmpty
+            let drawingData = canvasView.drawing.dataRepresentation()
+            let note = DrawingNote(title: finalTitle, drawingData: drawingData, createdAt: Date())
         }
     }
 }
 
 struct DrawingCanvasView: View {
     let drawingNote: DrawingNote
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) var dismiss
     @State private var canvasView = PKCanvasView()
     @State private var toolPickerIsActive = true
+    @State private var didPressCancel = false
 
     var body: some View {
         CanvasView(canvasView: $canvasView, toolPickerIsActive: $toolPickerIsActive)
@@ -102,14 +108,21 @@ struct DrawingCanvasView: View {
             .navigationTitle(drawingNote.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        drawingNote.drawingData = canvasView.drawing.dataRepresentation()
-                    }
-                }
+                CancelButton(didPressCancel: $didPressCancel)
             }
             .onAppear {
                 loadDrawing()
+            }
+            .onDisappear {
+                guard !didPressCancel else { return }
+                let hasDrawing = !canvasView.drawing.bounds.isEmpty
+                if hasDrawing {
+                    drawingNote.drawingData = canvasView.drawing.dataRepresentation()
+                    try? modelContext.save()
+                } else {
+                    modelContext.delete(drawingNote)
+                    try? modelContext.save()
+                }
             }
     }
 

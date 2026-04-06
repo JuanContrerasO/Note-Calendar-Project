@@ -34,7 +34,7 @@ struct NotesView: View {
                 Button(action: { showingAddOptions = true }) {
                     Image(systemName: "plus")
                 }
-                .buttonStyle(.borderedProminent)  // ✅ fixed from .glass
+                .buttonStyle(.borderedProminent)
             }
         }
         .confirmationDialog("Add", isPresented: $showingAddOptions, titleVisibility: .visible) {
@@ -75,8 +75,6 @@ struct NotesView: View {
             NoteDetailView(note: note)
         }
     }
-
-    // MARK: - Extracted Subviews
 
     @ViewBuilder
     private var mainList: some View {
@@ -202,8 +200,6 @@ struct NotesView: View {
         }
     }
 
-    // MARK: - Helper Properties & Functions
-
     private var sortedFolders: [Folder] {
         folders.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
@@ -262,6 +258,7 @@ struct AddNoteView: View {
     @State private var title = ""
     @State private var content = ""
     @State private var selectedFolderID: PersistentIdentifier?
+    @State private var didPressCancel = false
 
     //Add focus state for the two fields
     @FocusState private var focusedField: Field?
@@ -310,36 +307,31 @@ struct AddNoteView: View {
             .scrollDismissesKeyboard(.interactively) //Allow tapping outside to dismiss keyboard
             .navigationTitle("New Note")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                CancelButton(didPressCancel: $didPressCancel)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let note = Note(title: title, content: content, createdAt: Date())
-                        if let selectedFolderID,
-                           let folder = folders.first(where: { $0.persistentModelID == selectedFolderID }) {
-                            note.folder = folder
-                        }
-                        modelContext.insert(note)
-                        dismiss()
-                    }
-                    .disabled(title.isEmpty)
-                }
-                //Add a keyboard toolbar with a "Done" button
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") {
-                        focusedField = nil //Dismiss keyboard
-                    }
-                }
+                .doneButtonOnKeyboard(focused: _focusedField)
+        }
+        .onDisappear {
+            guard !didPressCancel else { return }
+            let trimmedTitle = title.trimmed
+            let trimmedContent = content.trimmed
+            guard !trimmedTitle.isEmpty || !trimmedContent.isEmpty else { return }
+            let note = Note(title: trimmedTitle.isEmpty ? "Untitled" : title, content: content, createdAt: Date())
+            if let selectedFolderID, let folder = folders.first(where: { $0.persistentModelID == selectedFolderID }) {
+                note.folder = folder
             }
+            modelContext.insert(note)
         }
     }
 }
 
 struct EditNoteView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
     @Bindable var note: Note
+    @State private var didPressCancel = false
+    @State private var editedTitle: String
+    @State private var editedContent: String
 
     //Add focus state for the two fields
     @FocusState private var focusedField: Field?
@@ -348,18 +340,24 @@ struct EditNoteView: View {
         case title, content
     }
 
+    init(note: Note) {
+        self.note = note
+        _editedTitle = State(initialValue: note.title)
+        _editedContent = State(initialValue: note.content)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Title", text: $note.title)
+                    TextField("Title", text: $editedTitle)
                         .focused($focusedField, equals: .title)
                         .submitLabel(.next)
                         .onSubmit {
                             focusedField = .content
                         }
 
-                    TextEditor(text: $note.content)
+                    TextEditor(text: $editedContent)
                         .focused($focusedField, equals: .content)
                         .frame(minHeight: 200)
                         .submitLabel(.done)
@@ -371,20 +369,13 @@ struct EditNoteView: View {
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Edit Note")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { dismiss() }
-                        .disabled(note.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") {
-                        focusedField = nil
-                    }
-                }
+                CancelButton(didPressCancel: $didPressCancel)
             }
+            .doneButtonOnKeyboard(focused: _focusedField)
+        }
+        .onDisappear {
+            guard !didPressCancel else { return }
+            NoteSaver.saveOrDelete(note: note, title: editedTitle, content: editedContent, context: modelContext)
         }
     }
 }
@@ -503,13 +494,28 @@ struct EditFolderView: View {
 
 struct NoteDetailView: View {
     let note: Note
+    @Environment(\.modelContext) private var modelContext
+    @State private var editedTitle: String
+    @State private var editedContent: String
+    @FocusState private var focusedField: Field?
+
+    enum Field { case title, content }
+
+    init(note: Note) {
+        self.note = note
+        _editedTitle = State(initialValue: note.title)
+        _editedContent = State(initialValue: note.content)
+    }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(note.title)
+            VStack(alignment: .leading, spacing: 16) {
+                TextField("Title", text: $editedTitle)
                     .font(.title)
                     .bold()
+                    .focused($focusedField, equals: .title)
+                    .submitLabel(.next)
+                    .onSubmit { focusedField = .content }
 
                 Text(note.createdAt, style: .date)
                     .font(.caption)
@@ -517,13 +523,19 @@ struct NoteDetailView: View {
 
                 Divider()
 
-                Text(note.content)
-                    .padding(.top)
+                TextEditor(text: $editedContent)
+                    .frame(minHeight: 200)
+                    .focused($focusedField, equals: .content)
+                    .submitLabel(.done)
+                    .onSubmit { focusedField = nil }
             }
             .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .doneButtonOnKeyboard(focused: _focusedField)
+        .onDisappear {
+            NoteSaver.saveOrDelete(note: note, title: editedTitle, content: editedContent, context: modelContext)
+        }
     }
 }
 
