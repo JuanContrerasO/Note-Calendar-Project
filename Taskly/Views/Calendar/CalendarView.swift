@@ -122,7 +122,7 @@ struct AddTaskView: View {
     @Environment(\.dismiss) var dismiss
     @State private var title = ""
     @State private var taskDate: Date
-    @State private var addToCalendar = false
+    @State private var addToCalendar = true
 
     init(selectedDate: Date, calendarManager: CalendarManager) {
         self.selectedDate = selectedDate

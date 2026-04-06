@@ -73,7 +73,7 @@ struct AddCourseView: View {
     @State private var startTime = Date()
     @State private var endTime = Date()
     @State private var selectedDays: Set<String> = []
-    @State private var syncToCalendar = false
+    @State private var syncToCalendar = true
     @State private var isShowingError = false
     @State private var errorMessage = ""
 
