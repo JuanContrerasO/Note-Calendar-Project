@@ -67,13 +67,15 @@ final class Course {
     var daysOfWeek: String
     var startTime: Date
     var endTime: Date
+    var calendarEventID: String?
 
-    init(name: String, instructor: String, location: String, daysOfWeek: String, startTime: Date, endTime: Date) {
+    init(name: String, instructor: String, location: String, daysOfWeek: String, startTime: Date, endTime: Date, calendarEventID: String? = nil) {
         self.name = name
         self.instructor = instructor
         self.location = location
         self.daysOfWeek = daysOfWeek
         self.startTime = startTime
         self.endTime = endTime
+        self.calendarEventID = calendarEventID
     }
 }
