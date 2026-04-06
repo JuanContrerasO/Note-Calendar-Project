@@ -38,11 +38,13 @@ final class TaskItem {
     var title: String
     var date: Date
     var isCompleted: Bool
+    var reminderDate: Date?
 
-    init(title: String, date: Date, isCompleted: Bool) {
+    init(title: String, date: Date, isCompleted: Bool, reminderDate: Date? = nil) {
         self.title = title
         self.date = date
         self.isCompleted = isCompleted
+        self.reminderDate = reminderDate
     }
 }
 

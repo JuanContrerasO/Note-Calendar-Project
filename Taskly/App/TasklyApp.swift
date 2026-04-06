@@ -30,6 +30,9 @@ struct TasklyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    _ = NotificationManager.shared
+                }
         }
         .modelContainer(sharedModelContainer)
     }

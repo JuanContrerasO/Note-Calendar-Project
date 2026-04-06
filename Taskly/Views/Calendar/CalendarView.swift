@@ -103,14 +103,19 @@ struct CalendarView: View {
             .sorted { $0.date < $1.date }
     }
 
-    func toggleTask(_ task: TaskItem) {
-        task.isCompleted.toggle()
-    }
-
     func deleteTask(at offsets: IndexSet) {
         let filtered = filteredTasks
         for index in offsets {
-            modelContext.delete(filtered[index])
+            let task = filtered[index]
+            NotificationManager.shared.cancelNotification(for: task)
+            modelContext.delete(task)
+        }
+    }
+
+    func toggleTask(_ task: TaskItem) {
+        task.isCompleted.toggle()
+        if task.isCompleted {
+            NotificationManager.shared.cancelNotification(for: task)
         }
     }
 }
@@ -123,6 +128,8 @@ struct AddTaskView: View {
     @State private var title = ""
     @State private var taskDate: Date
     @State private var addToCalendar = true
+    @State private var setReminder = false
+    @State private var reminderDate = Date()
 
     init(selectedDate: Date, calendarManager: CalendarManager) {
         self.selectedDate = selectedDate
@@ -139,6 +146,13 @@ struct AddTaskView: View {
                 if EKEventStore.authorizationStatus(for: .event) == .fullAccess {
                     Toggle("Add to Calendar", isOn: $addToCalendar)
                 }
+
+                Section {
+                    Toggle("Remind me", isOn: $setReminder)
+                    if setReminder {
+                        DatePicker("Reminder time", selection: $reminderDate, in: Date()...)
+                    }
+                }
             }
             .navigationTitle("New Task")
             .toolbar {
@@ -148,12 +162,19 @@ struct AddTaskView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let task = TaskItem(title: title, date: taskDate, isCompleted: false)
+                        if setReminder {
+                            task.reminderDate = reminderDate
+                        }
                         modelContext.insert(task)
 
                         if addToCalendar {
                             Task {
                                 try? await calendarManager.saveTaskToCalendar(title: title, date: taskDate)
                             }
+                        }
+
+                        if setReminder {
+                            NotificationManager.shared.scheduleNotification(for: task)
                         }
                         dismiss()
                     }
