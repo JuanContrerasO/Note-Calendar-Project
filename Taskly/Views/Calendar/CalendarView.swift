@@ -15,7 +15,6 @@ struct CalendarView: View {
                 DatePicker("Select Date", selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .padding()
-                    //Expands to full available width
                     .frame(maxWidth: .infinity)
                     .background(Color(.secondarySystemBackground))
                     .cornerRadius(10)
@@ -50,28 +49,28 @@ struct CalendarView: View {
 
                     Section("Tasks") {
                         ForEach(filteredTasks) { task in
-                            HStack {
-                                Button(action: { toggleTask(task) }) {
-                                    Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(task.isCompleted ? .green : .gray)
-                                }
+                            NavigationLink(destination: EditTaskView(task: task)) {
+                                HStack {
+                                    Button(action: { toggleTask(task) }) {
+                                        Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(task.isCompleted ? .green : .gray)
+                                    }
+                                    .buttonStyle(.plain)
 
-                                VStack(alignment: .leading) {
-                                    Text(task.title)
-                                        .strikethrough(task.isCompleted)
-                                    Text(task.date, style: .time)
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
+                                    VStack(alignment: .leading) {
+                                        Text(task.title)
+                                            .strikethrough(task.isCompleted)
+                                        Text(task.date, style: .time)
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
                                 }
                             }
                         }
                         .onDelete(perform: deleteTask)
                     }
                 }
-                
-                //The list can use either more or less space depending on the device
                 .listStyle(InsetGroupedListStyle())
-
             }
             .navigationTitle("Calendar")
             .toolbar {
@@ -84,12 +83,13 @@ struct CalendarView: View {
             }) {
                 AddTaskView(selectedDate: selectedDate, calendarManager: calendarManager)
                     .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)   
+                    .presentationDragIndicator(.visible)
             }
             .onAppear {
                 Task {
                     await calendarManager.requestAccess()
                     calendarManager.fetchEvents(for: selectedDate)
+                    NotificationManager.shared.listPendingNotifications() // debug
                 }
             }
             .onChange(of: selectedDate) { _, newDate in
@@ -103,19 +103,19 @@ struct CalendarView: View {
             .sorted { $0.date < $1.date }
     }
 
+    func toggleTask(_ task: TaskItem) {
+        task.isCompleted.toggle()
+        if task.isCompleted {
+            NotificationManager.shared.cancelNotification(for: task)
+        }
+    }
+
     func deleteTask(at offsets: IndexSet) {
         let filtered = filteredTasks
         for index in offsets {
             let task = filtered[index]
             NotificationManager.shared.cancelNotification(for: task)
             modelContext.delete(task)
-        }
-    }
-
-    func toggleTask(_ task: TaskItem) {
-        task.isCompleted.toggle()
-        if task.isCompleted {
-            NotificationManager.shared.cancelNotification(for: task)
         }
     }
 }
@@ -143,9 +143,7 @@ struct AddTaskView: View {
                 TextField("Task Title", text: $title)
                 DatePicker("Date & Time", selection: $taskDate)
 
-                if EKEventStore.authorizationStatus(for: .event) == .fullAccess {
-                    Toggle("Add to Calendar", isOn: $addToCalendar)
-                }
+                Toggle("Add to Calendar", isOn: $addToCalendar)
 
                 Section {
                     Toggle("Remind me", isOn: $setReminder)
@@ -161,26 +159,102 @@ struct AddTaskView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        let task = TaskItem(title: title, date: taskDate, isCompleted: false)
-                        if setReminder {
-                            task.reminderDate = reminderDate
-                        }
-                        modelContext.insert(task)
-
-                        if addToCalendar {
-                            Task {
-                                try? await calendarManager.saveTaskToCalendar(title: title, date: taskDate)
-                            }
-                        }
-
-                        if setReminder {
-                            NotificationManager.shared.scheduleNotification(for: task)
-                        }
-                        dismiss()
+                        saveTask()
                     }
                     .disabled(title.isEmpty)
                 }
             }
         }
+    }
+
+    private func saveTask() {
+        let task = TaskItem(title: title, date: taskDate, isCompleted: false)
+        if setReminder {
+            task.reminderDate = reminderDate
+        }
+        modelContext.insert(task)
+
+        if addToCalendar {
+            Task {
+                do {
+                    try await calendarManager.saveTaskToCalendar(title: title, date: taskDate)
+                } catch {
+                    print("Calendar save error: \(error)")
+                }
+            }
+        }
+
+        if setReminder {
+            NotificationManager.shared.scheduleNotification(for: task)
+        }
+        dismiss()
+    }
+}
+
+struct EditTaskView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) var dismiss
+    @Bindable var task: TaskItem
+    @State private var title: String
+    @State private var taskDate: Date
+    @State private var addToCalendar: Bool
+    @State private var setReminder: Bool
+    @State private var reminderDate: Date
+    @State private var calendarManager = CalendarManager()
+
+    init(task: TaskItem) {
+        self.task = task
+        _title = State(initialValue: task.title)
+        _taskDate = State(initialValue: task.date)
+        _addToCalendar = State(initialValue: false) // We don't track calendar sync, default false
+        _setReminder = State(initialValue: task.reminderDate != nil)
+        _reminderDate = State(initialValue: task.reminderDate ?? Date())
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Title", text: $title)
+                DatePicker("Date & Time", selection: $taskDate)
+
+                Toggle("Add to Calendar", isOn: $addToCalendar)
+
+                Section {
+                    Toggle("Remind me", isOn: $setReminder)
+                    if setReminder {
+                        DatePicker("Reminder time", selection: $reminderDate, in: Date()...)
+                    }
+                }
+            }
+            .navigationTitle("Edit Task")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveChanges()
+                    }
+                    .disabled(title.isEmpty)
+                }
+            }
+        }
+        .environment(calendarManager)
+    }
+
+    private func saveChanges() {
+        task.title = title
+        task.date = taskDate
+        if task.reminderDate != nil {
+            NotificationManager.shared.cancelNotification(for: task)
+        }
+        if setReminder {
+            task.reminderDate = reminderDate
+            NotificationManager.shared.scheduleNotification(for: task)
+        } else {
+            task.reminderDate = nil
+        }
+        try? modelContext.save()
+        dismiss()
     }
 }

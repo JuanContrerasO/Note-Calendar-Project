@@ -148,28 +148,27 @@ struct AddCourseView: View {
             startTime: startTime,
             endTime: endTime
         )
+        modelContext.insert(course)
 
         if syncToCalendar {
             Task {
                 do {
+                    try await calendarManager.requestAccess()
                     let eventID = try await calendarManager.createEvent(for: course)
                     await MainActor.run {
                         course.calendarEventID = eventID
-                        modelContext.insert(course)
-                        dismiss()
+                        try? modelContext.save()
                     }
                 } catch {
                     await MainActor.run {
                         errorMessage = "Failed to sync: \(error.localizedDescription)"
                         isShowingError = true
-                        // Do NOT insert the course
+                        // Course already saved, just without calendar event
                     }
                 }
             }
-        } else {
-            modelContext.insert(course)
-            dismiss()
         }
+        dismiss()
     }
 }
 

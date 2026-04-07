@@ -16,6 +16,9 @@ class CalendarManager {
                 self.authorizationStatus = EKEventStore.authorizationStatus(for: .event)
                 if !granted {
                     self.errorMessage = "Calendar access was denied. You can enable it in Settings."
+                } else {
+                    // Force calendar list to load
+                    _ = self.eventStore.calendars(for: .event)
                 }
             }
         } catch {
@@ -154,8 +157,15 @@ class CalendarManager {
     }
 
     private func getCalendar() -> EKCalendar? {
-    if let defaultCalendar = eventStore.defaultCalendarForNewEvents {
-        return defaultCalendar
+        print("Looking for default calendar...")
+        if let defaultCalendar = eventStore.defaultCalendarForNewEvents {
+            print("Default calendar found: \(defaultCalendar.title)")
+            return defaultCalendar
+        }
+        print("No default calendar, searching writable calendars...")
+        let writable = eventStore.calendars(for: .event).first(where: { $0.allowsContentModifications })
+        print("Writable calendar: \(writable?.title ?? "none")")
+        return writable
     }
     // Fallback to first writable calendar
     return eventStore.calendars(for: .event).first(where: { $0.allowsContentModifications })

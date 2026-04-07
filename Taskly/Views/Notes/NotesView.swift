@@ -383,9 +383,7 @@ struct AddFolderView: View {
     @State private var name = ""
     @State private var selectedColorName = FolderColor.blue.rawValue
 
-    private let gridColumns = [
-        GridItem(.adaptive(minimum: 36), spacing: 12)
-    ]
+    private let gridColumns = [GridItem(.adaptive(minimum: 36), spacing: 12)]
 
     var body: some View {
         NavigationStack {
@@ -393,7 +391,6 @@ struct AddFolderView: View {
                 Section("Name") {
                     TextField("Folder Name", text: $name)
                 }
-
                 Section("Color") {
                     LazyVGrid(columns: gridColumns, spacing: 12) {
                         ForEach(FolderColor.allCases) { color in
@@ -441,9 +438,7 @@ struct EditFolderView: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var folder: Folder
 
-    private let gridColumns = [
-        GridItem(.adaptive(minimum: 36), spacing: 12)
-    ]
+    private let gridColumns = [GridItem(.adaptive(minimum: 36), spacing: 12)]
 
     var body: some View {
         NavigationStack {
@@ -451,7 +446,6 @@ struct EditFolderView: View {
                 Section("Name") {
                     TextField("Folder Name", text: $folder.name)
                 }
-
                 Section("Color") {
                     LazyVGrid(columns: gridColumns, spacing: 12) {
                         ForEach(FolderColor.allCases) { color in
@@ -483,7 +477,7 @@ struct EditFolderView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { dismiss() }
-                        .disabled(folder.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(folder.name.trimmed.isEmpty)
                 }
             }
         }
@@ -548,7 +542,6 @@ enum FolderColor: String, CaseIterable, Identifiable {
     case blue, teal, green, yellow, orange, red, pink, purple, gray
 
     var id: String { rawValue }
-
     var label: String { rawValue.capitalized }
 
     var color: Color {
