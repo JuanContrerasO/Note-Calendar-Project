@@ -300,7 +300,9 @@ struct AddNoteView: View {
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("New Note")
             .toolbar {
-                CancelButton(didPressCancel: $didPressCancel)
+                ToolbarItem(placement: .cancellationAction) {
+                    CancelButton(didPressCancel: $didPressCancel)
+                }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") { focusedField = nil }
@@ -358,7 +360,9 @@ struct EditNoteView: View {
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Edit Note")
             .toolbar {
-                CancelButton(didPressCancel: $didPressCancel)
+                ToolbarItem(placement: .cancellationAction) {
+                    CancelButton(didPressCancel: $didPressCancel)
+                }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") { focusedField = nil }
