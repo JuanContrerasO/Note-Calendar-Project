@@ -152,7 +152,6 @@ struct AddCourseView: View {
         if syncToCalendar {
             Task {
                 do {
-                    try await calendarManager.requestAccess()
                     let eventID = try await calendarManager.createEvent(for: course)
                     await MainActor.run {
                         course.calendarEventID = eventID
@@ -246,7 +245,6 @@ struct CourseDetailView: View {
         defer { isSyncing = false }
         
         do {
-            try await calendarManager.requestAccess()
             if enable {
                 if course.calendarEventID == nil {
                     let eventID = try await calendarManager.createEvent(for: course)
