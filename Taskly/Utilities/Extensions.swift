@@ -18,7 +18,7 @@ extension String {
 
 // MARK: - View Extension for Keyboard Done Button
 extension View {
-    func doneButtonOnKeyboard<F: Hashable>(focused: FocusState<F?>.Binding) -> some View {
+    func doneButtonOnKeyboard<FocusValue: Hashable>(focused: FocusState<FocusValue?>.Binding) -> some View {
         self.toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
