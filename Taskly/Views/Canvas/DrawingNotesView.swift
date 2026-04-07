@@ -85,11 +85,13 @@ struct AddDrawingView: View {
         }
         .onDisappear {
             guard !didPressCancel else { return }
-            let hasDrawing else { return }
+            let hasDrawing = !canvasView.drawing.bounds.isEmpty
             guard hasDrawing else { return }
             let finalTitle = title.untitledIfEmpty
             let drawingData = canvasView.drawing.dataRepresentation()
             let note = DrawingNote(title: finalTitle, drawingData: drawingData, createdAt: Date())
+            modelContext.insert(note)
+            try? modelContext.save()
         }
     }
 }
