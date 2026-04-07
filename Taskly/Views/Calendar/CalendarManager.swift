@@ -53,7 +53,10 @@ class CalendarManager {
         event.title = title
         event.startDate = date
         event.endDate = Calendar.current.date(byAdding: .hour, value: 1, to: date)!
-        event.calendar = eventStore.defaultCalendarForNewEvents
+        guard let calendar = getCalendar() else {
+            throw CalendarError.noCalendar
+        }
+        event.calendar = calendar
 
         try eventStore.save(event, span: .thisEvent)
     }
@@ -124,7 +127,10 @@ class CalendarManager {
         )
         event.addRecurrenceRule(recurrenceRule)
 
-        event.calendar = eventStore.defaultCalendarForNewEvents
+        guard let calendar = getCalendar() else {
+            throw CalendarError.noCalendar
+        }
+        event.calendar = calendar
         try eventStore.save(event, span: .futureEvents)
         return event.eventIdentifier
     }
@@ -147,16 +153,26 @@ class CalendarManager {
         try eventStore.remove(event, span: .futureEvents)
     }
 
+    private func getCalendar() -> EKCalendar? {
+    if let defaultCalendar = eventStore.defaultCalendarForNewEvents {
+        return defaultCalendar
+    }
+    // Fallback to first writable calendar
+    return eventStore.calendars(for: .event).first(where: { $0.allowsContentModifications })
+    }
+
     enum CalendarError: LocalizedError {
         case noAccess
         case invalidDate
         case eventNotFound
+        case noCalendar
 
         var errorDescription: String? {
             switch self {
             case .noAccess: return "Calendar access is required."
             case .invalidDate: return "Could not create a valid start date."
             case .eventNotFound: return "Calendar event not found."
+            case .noCalendar: return "No calendar available to save events. Please check your calendar settings."
             }
         }
     }

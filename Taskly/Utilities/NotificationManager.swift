@@ -40,4 +40,13 @@ class NotificationManager {
     func cancelNotification(for task: TaskItem) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [task.id.uuidString])
     }
+
+    func listPendingNotifications() {
+    UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+        print("Pending notifications: \(requests.count)")
+        for request in requests {
+            print("Identifier: \(request.identifier), trigger: \(String(describing: request.trigger))")
+        }
+    }
+}
 }

@@ -25,6 +25,9 @@ struct ContentView: View {
                     Label("Schedule", systemImage: "book")
                 }
         }
+        .onAppear {
+            _ = NotificationManager.shared
+        }
         .sheet(isPresented: $isWelcomeSheetShowing) {
             WelcomeSheetView(isPresented: $isWelcomeSheetShowing)
                 //For ipad (and other devices): the sheet displays in medium or large sizes dependig on the device being used
