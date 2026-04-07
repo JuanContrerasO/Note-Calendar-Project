@@ -76,7 +76,9 @@ struct AddDrawingView: View {
             }
             .navigationTitle("New Drawing")
             .toolbar {
-                CancelButton(didPressCancel: $didPressCancel)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    CancelButton(didPressCancel: $didPressCancel)
+                }       
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") { isTitleFocused = false }
