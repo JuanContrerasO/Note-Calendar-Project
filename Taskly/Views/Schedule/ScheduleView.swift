@@ -241,6 +241,50 @@ struct CourseDetailView: View {
     }
 
     // Keep the existing toggleSync and forceResync methods unchanged
-    private func toggleSync(enable: Bool) async { ... }
-    private func forceResync() async { ... }
+    private func toggleSync(enable: Bool) async {
+        isSyncing = true
+        defer { isSyncing = false }
+        
+        do {
+            try await calendarManager.requestAccess()
+            if enable {
+                if course.calendarEventID == nil {
+                    let eventID = try await calendarManager.createEvent(for: course)
+                    await MainActor.run {
+                        course.calendarEventID = eventID
+                    }
+                }
+            } else {
+                if course.calendarEventID != nil {
+                    try await calendarManager.deleteEvent(for: course)
+                    await MainActor.run {
+                        course.calendarEventID = nil
+                    }
+                }
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                isShowingError = true
+                syncEnabled = course.calendarEventID != nil
+            }
+        }
+    }
+
+    private func forceResync() async {
+        isSyncing = true
+        defer { isSyncing = false }
+        
+        do {
+            let newEventID = try await calendarManager.updateEvent(for: course)
+            await MainActor.run {
+                course.calendarEventID = newEventID
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                isShowingError = true
+            }
+        }
+    }
 }
