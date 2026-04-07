@@ -260,31 +260,23 @@ struct AddNoteView: View {
     @State private var selectedFolderID: PersistentIdentifier?
     @State private var didPressCancel = false
 
-    //Add focus state for the two fields
     @FocusState private var focusedField: Field?
-
-    enum Field {
-        case title, content
-    }
+    enum Field { case title, content }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     TextField("Title", text: $title)
-                        .focused($focusedField, equals: .title) //Bind focus
-                        .submitLabel(.next) //"Next" on keyboard
-                        .onSubmit {
-                            focusedField = .content //Move to content when Next is tapped
-                        }
+                        .focused($focusedField, equals: .title)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .content }
 
                     TextEditor(text: $content)
                         .focused($focusedField, equals: .content)
                         .frame(minHeight: 200)
-                        .submitLabel(.done) //"Done" on keyboard
-                        .onSubmit {
-                            focusedField = nil //Dismiss keyboard when Done tappped
-                        }
+                        .submitLabel(.done)
+                        .onSubmit { focusedField = nil }
                 }
 
                 if !folders.isEmpty {
@@ -304,12 +296,12 @@ struct AddNoteView: View {
                     }
                 }
             }
-            .scrollDismissesKeyboard(.interactively) //Allow tapping outside to dismiss keyboard
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("New Note")
             .toolbar {
                 CancelButton(didPressCancel: $didPressCancel)
-                }
-                .doneButtonOnKeyboard(focused: _focusedField)
+            }
+            .doneButtonOnKeyboard(focused: _focusedField)
         }
         .onDisappear {
             guard !didPressCancel else { return }

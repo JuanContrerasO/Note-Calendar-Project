@@ -1,5 +1,6 @@
 //
-//  Created by Juan Contreras on 4/6/26.
+//  Extensions.swift
+//  Taskly
 //
 
 import SwiftUI
@@ -15,8 +16,9 @@ extension String {
     }
 }
 
+// MARK: - View Extension for Keyboard Done Button
 extension View {
-    func doneButtonOnKeyboard(focused: FocusState<some Hashable?>.Binding) -> some View {
+    func doneButtonOnKeyboard<F: Hashable>(focused: FocusState<F?>.Binding) -> some View {
         self.toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
