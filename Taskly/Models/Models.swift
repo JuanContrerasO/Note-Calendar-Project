@@ -35,12 +35,14 @@ final class Note {
 
 @Model
 final class TaskItem {
+    @Attribute(.unique) var id = UUID()   
     var title: String
     var date: Date
     var isCompleted: Bool
     var reminderDate: Date?
 
     init(title: String, date: Date, isCompleted: Bool, reminderDate: Date? = nil) {
+        self.id = UUID()
         self.title = title
         self.date = date
         self.isCompleted = isCompleted
