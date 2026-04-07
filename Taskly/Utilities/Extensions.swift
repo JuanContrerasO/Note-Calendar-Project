@@ -5,7 +5,6 @@
 
 import SwiftUI
 
-// MARK: - String Extensions
 extension String {
     var trimmed: String {
         trimmingCharacters(in: .whitespacesAndNewlines)
@@ -13,19 +12,5 @@ extension String {
     
     var untitledIfEmpty: String {
         trimmed.isEmpty ? "Untitled" : self
-    }
-}
-
-// MARK: - View Extension for Keyboard Done Button
-extension View {
-    func doneButtonOnKeyboard<FocusValue: Hashable>(focused: FocusState<FocusValue?>.Binding) -> some View {
-        self.toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    focused.wrappedValue = nil
-                }
-            }
-        }
     }
 }

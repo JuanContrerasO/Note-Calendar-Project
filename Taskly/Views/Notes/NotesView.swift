@@ -251,6 +251,7 @@ struct NotesView: View {
     }
 }
 
+// MARK: - Add Note View
 struct AddNoteView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
@@ -300,8 +301,11 @@ struct AddNoteView: View {
             .navigationTitle("New Note")
             .toolbar {
                 CancelButton(didPressCancel: $didPressCancel)
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focusedField = nil }
+                }
             }
-            .doneButtonOnKeyboard(focused: _focusedField)
         }
         .onDisappear {
             guard !didPressCancel else { return }
@@ -317,6 +321,7 @@ struct AddNoteView: View {
     }
 }
 
+// MARK: - Edit Note View
 struct EditNoteView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
@@ -325,12 +330,8 @@ struct EditNoteView: View {
     @State private var editedTitle: String
     @State private var editedContent: String
 
-    //Add focus state for the two fields
     @FocusState private var focusedField: Field?
-
-    enum Field {
-        case title, content
-    }
+    enum Field { case title, content }
 
     init(note: Note) {
         self.note = note
@@ -345,25 +346,24 @@ struct EditNoteView: View {
                     TextField("Title", text: $editedTitle)
                         .focused($focusedField, equals: .title)
                         .submitLabel(.next)
-                        .onSubmit {
-                            focusedField = .content
-                        }
+                        .onSubmit { focusedField = .content }
 
                     TextEditor(text: $editedContent)
                         .focused($focusedField, equals: .content)
                         .frame(minHeight: 200)
                         .submitLabel(.done)
-                        .onSubmit {
-                            focusedField = nil
-                        }
+                        .onSubmit { focusedField = nil }
                 }
             }
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Edit Note")
             .toolbar {
                 CancelButton(didPressCancel: $didPressCancel)
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focusedField = nil }
+                }
             }
-            .doneButtonOnKeyboard(focused: _focusedField)
         }
         .onDisappear {
             guard !didPressCancel else { return }
@@ -372,6 +372,7 @@ struct EditNoteView: View {
     }
 }
 
+// MARK: - Add Folder View
 struct AddFolderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
@@ -431,6 +432,7 @@ struct AddFolderView: View {
     }
 }
 
+// MARK: - Edit Folder View
 struct EditFolderView: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var folder: Folder
@@ -484,6 +486,7 @@ struct EditFolderView: View {
     }
 }
 
+// MARK: - Note Detail View
 struct NoteDetailView: View {
     let note: Note
     @Environment(\.modelContext) private var modelContext
@@ -524,50 +527,37 @@ struct NoteDetailView: View {
             .padding()
         }
         .navigationBarTitleDisplayMode(.inline)
-        .doneButtonOnKeyboard(focused: _focusedField)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focusedField = nil }
+            }
+        }
         .onDisappear {
             NoteSaver.saveOrDelete(note: note, title: editedTitle, content: editedContent, context: modelContext)
         }
     }
 }
 
+// MARK: - FolderColor Enum
 enum FolderColor: String, CaseIterable, Identifiable {
-    case blue
-    case teal
-    case green
-    case yellow
-    case orange
-    case red
-    case pink
-    case purple
-    case gray
+    case blue, teal, green, yellow, orange, red, pink, purple, gray
 
     var id: String { rawValue }
 
-    var label: String {
-        rawValue.capitalized
-    }
+    var label: String { rawValue.capitalized }
 
     var color: Color {
         switch self {
-        case .blue:
-            return Color.blue
-        case .teal:
-            return Color.teal
-        case .green:
-            return Color.green
-        case .yellow:
-            return Color.yellow
-        case .orange:
-            return Color.orange
-        case .red:
-            return Color.red
-        case .pink:
-            return Color.pink
-        case .purple:
-            return Color.purple
-        case .gray:
-            return Color.gray
+        case .blue: return .blue
+        case .teal: return .teal
+        case .green: return .green
+        case .yellow: return .yellow
+        case .orange: return .orange
+        case .red: return .red
+        case .pink: return .pink
+        case .purple: return .purple
+        case .gray: return .gray
         }
     }
 
