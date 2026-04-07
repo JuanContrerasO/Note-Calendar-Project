@@ -15,12 +15,15 @@ extension String {
     }
 }
 
-struct MyView: View {
-    @FocusState private var isTitleFocused: Bool  // Bool is Hashable
-
-    var body: some View {
-        TextField("Title", text: $title)
-            .focused($isTitleFocused)
-            .doneButtonOnKeyboard(focused: $isTitleFocused)  // ✅ Works
+extension View {
+    func doneButtonOnKeyboard(focused: FocusState<some Hashable?>.Binding) -> some View {
+        self.toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focused.wrappedValue = nil
+                }
+            }
+        }
     }
 }
