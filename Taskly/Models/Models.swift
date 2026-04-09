@@ -83,3 +83,13 @@ final class Course {
         self.calendarEventID = calendarEventID
     }
 }
+
+@Model
+final class Home {
+    var userName: String
+    var createdAt: Date
+    init(userName: String, createdAt: Date = .now) {
+        self.userName = userName
+        self.createdAt = createdAt
+    }
+}

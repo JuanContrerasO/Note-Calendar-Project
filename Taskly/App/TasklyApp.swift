@@ -1,10 +1,3 @@
-//
-//  TasklyApp.swift
-//  Taskly
-//
-//  Created by Ava Saltzman on 2/5/26.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -17,6 +10,7 @@ struct TasklyApp: App {
             TaskItem.self,
             DrawingNote.self,
             Course.self,
+            Home.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
