@@ -158,11 +158,12 @@ class CalendarManager {
 
     private func getCalendar() -> EKCalendar? {
         print("Looking for default calendar...")
-        if let defaultCalendar = eventStore.defaultCalendarForNewEvents {
+        if let defaultCalendar = eventStore.defaultCalendarForNewEvents,
+           defaultCalendar.allowsContentModifications {
             print("Default calendar found: \(defaultCalendar.title)")
             return defaultCalendar
         }
-        print("No default calendar, searching writable calendars...")
+        print("No default calendar or it's read-only, searching writable calendars...")
         let writable = eventStore.calendars(for: .event).first(where: { $0.allowsContentModifications })
         print("Writable calendar: \(writable?.title ?? "none")")
         return writable

@@ -22,20 +22,23 @@ struct NotesView: View {
     var body: some View {
         NavigationStack {
             mainList
-        }
-        .navigationTitle("Notes")
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button(isEditing ? "Done" : "Edit") {
-                    isEditing.toggle()
+                .navigationTitle("Notes")
+                .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
+                .toolbarColorScheme(.dark, for: .navigationBar)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(isEditing ? "Done" : "Edit") {
+                            isEditing.toggle()
+                        }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: { showingAddOptions = true }) {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color(hex: "7C6FF7"))
+                    }
                 }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { showingAddOptions = true }) {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(.borderedProminent)
-            }
         }
         .confirmationDialog("Add", isPresented: $showingAddOptions, titleVisibility: .visible) {
             Button("New Note") { showingAddNote = true }
@@ -94,13 +97,7 @@ struct NotesView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(
-            Image("Image")
-                .resizable()
-                .scaledToFill()
-                .opacity(0.2)
-                .ignoresSafeArea()
-        )
+        .background(Color(hex: "0F1629"))
     }
 
     @ViewBuilder
@@ -147,16 +144,17 @@ struct NotesView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(folder.name)
                     .font(.headline)
+                    .foregroundColor(Color(hex: "e8edf5"))
                 Text("\(notes.count) Notes • \(latestDate.formatted(date: .abbreviated, time: .omitted))")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "5a6a8a"))
             }
 
             Spacer()
 
             Image(systemName: expandedFolderIDs.contains(folder.persistentModelID) ? "chevron.down" : "chevron.right")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "5a6a8a"))
         }
         .padding(.vertical, 4)
     }
@@ -166,9 +164,10 @@ struct NotesView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(note.title)
                     .font(.headline)
+                    .foregroundColor(Color(hex: "e8edf5"))
                 Text(note.content)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(Color(hex: "5a6a8a"))
                     .lineLimit(2)
             }
 
@@ -176,7 +175,7 @@ struct NotesView: View {
 
             Text(note.createdAt, style: .date)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "5a6a8a"))
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
@@ -272,12 +271,15 @@ struct AddNoteView: View {
                         .focused($focusedField, equals: .title)
                         .submitLabel(.next)
                         .onSubmit { focusedField = .content }
+                        .foregroundColor(Color(hex: "e8edf5"))
 
                     TextEditor(text: $content)
                         .focused($focusedField, equals: .content)
                         .frame(minHeight: 200)
                         .submitLabel(.done)
                         .onSubmit { focusedField = nil }
+                        .foregroundColor(Color(hex: "e8edf5"))
+                        .scrollContentBackground(.hidden)
                 }
 
                 if !folders.isEmpty {
@@ -294,11 +296,16 @@ struct AddNoteView: View {
                                 .tag(Optional(folder.persistentModelID))
                             }
                         }
+                        .tint(Color(hex: "7C6FF7"))
                     }
                 }
             }
             .scrollDismissesKeyboard(.interactively)
+            .scrollContentBackground(.hidden)
+            .background(Color(hex: "0F1629"))
             .navigationTitle("New Note")
+            .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     CancelButton(didPressCancel: $didPressCancel)
@@ -306,6 +313,7 @@ struct AddNoteView: View {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") { focusedField = nil }
+                        .foregroundColor(Color(hex: "7C6FF7"))
                 }
             }
         }
@@ -349,16 +357,23 @@ struct EditNoteView: View {
                         .focused($focusedField, equals: .title)
                         .submitLabel(.next)
                         .onSubmit { focusedField = .content }
+                        .foregroundColor(Color(hex: "e8edf5"))
 
                     TextEditor(text: $editedContent)
                         .focused($focusedField, equals: .content)
                         .frame(minHeight: 200)
                         .submitLabel(.done)
                         .onSubmit { focusedField = nil }
+                        .foregroundColor(Color(hex: "e8edf5"))
+                        .scrollContentBackground(.hidden)
                 }
             }
             .scrollDismissesKeyboard(.interactively)
+            .scrollContentBackground(.hidden)
+            .background(Color(hex: "0F1629"))
             .navigationTitle("Edit Note")
+            .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     CancelButton(didPressCancel: $didPressCancel)
@@ -366,6 +381,7 @@ struct EditNoteView: View {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") { focusedField = nil }
+                        .foregroundColor(Color(hex: "7C6FF7"))
                 }
             }
         }
@@ -390,6 +406,7 @@ struct AddFolderView: View {
             Form {
                 Section("Name") {
                     TextField("Folder Name", text: $name)
+                        .foregroundColor(Color(hex: "e8edf5"))
                 }
                 Section("Color") {
                     LazyVGrid(columns: gridColumns, spacing: 12) {
@@ -403,7 +420,7 @@ struct AddFolderView: View {
                                     .overlay(
                                         Circle()
                                             .stroke(
-                                                selectedColorName == color.rawValue ? Color.primary : Color.clear,
+                                                selectedColorName == color.rawValue ? Color(hex: "e8edf5") : Color.clear,
                                                 lineWidth: 2
                                             )
                                     )
@@ -415,7 +432,11 @@ struct AddFolderView: View {
                     .padding(.vertical, 4)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color(hex: "0F1629"))
             .navigationTitle("New Folder")
+            .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -427,6 +448,7 @@ struct AddFolderView: View {
                         dismiss()
                     }
                     .disabled(name.isEmpty)
+                    .tint(Color(hex: "7C6FF7"))
                 }
             }
         }
@@ -445,6 +467,7 @@ struct EditFolderView: View {
             Form {
                 Section("Name") {
                     TextField("Folder Name", text: $folder.name)
+                        .foregroundColor(Color(hex: "e8edf5"))
                 }
                 Section("Color") {
                     LazyVGrid(columns: gridColumns, spacing: 12) {
@@ -458,7 +481,7 @@ struct EditFolderView: View {
                                     .overlay(
                                         Circle()
                                             .stroke(
-                                                folder.colorName == color.rawValue ? Color.primary : Color.clear,
+                                                folder.colorName == color.rawValue ? Color(hex: "e8edf5") : Color.clear,
                                                 lineWidth: 2
                                             )
                                     )
@@ -470,7 +493,11 @@ struct EditFolderView: View {
                     .padding(.vertical, 4)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color(hex: "0F1629"))
             .navigationTitle("Edit Folder")
+            .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -478,6 +505,7 @@ struct EditFolderView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { dismiss() }
                         .disabled(folder.name.trimmed.isEmpty)
+                        .tint(Color(hex: "7C6FF7"))
                 }
             }
         }
@@ -506,29 +534,37 @@ struct NoteDetailView: View {
                 TextField("Title", text: $editedTitle)
                     .font(.title)
                     .bold()
+                    .foregroundColor(Color(hex: "e8edf5"))
                     .focused($focusedField, equals: .title)
                     .submitLabel(.next)
                     .onSubmit { focusedField = .content }
 
                 Text(note.createdAt, style: .date)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(Color(hex: "5a6a8a"))
 
                 Divider()
+                    .overlay(Color(hex: "1e2c45"))
 
                 TextEditor(text: $editedContent)
                     .frame(minHeight: 200)
+                    .foregroundColor(Color(hex: "e8edf5"))
+                    .scrollContentBackground(.hidden)
                     .focused($focusedField, equals: .content)
                     .submitLabel(.done)
                     .onSubmit { focusedField = nil }
             }
             .padding()
         }
+        .background(Color(hex: "0F1629"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Done") { focusedField = nil }
+                    .foregroundColor(Color(hex: "7C6FF7"))
             }
         }
         .onDisappear {
@@ -546,19 +582,19 @@ enum FolderColor: String, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
-        case .blue: return .blue
-        case .teal: return .teal
-        case .green: return .green
-        case .yellow: return .yellow
-        case .orange: return .orange
-        case .red: return .red
-        case .pink: return .pink
-        case .purple: return .purple
-        case .gray: return .gray
+        case .blue:   return Color(hex: "7C6FF7")
+        case .teal:   return Color(hex: "2DD4BF")
+        case .green:  return Color(hex: "4ade80")
+        case .yellow: return Color(hex: "fbbf24")
+        case .orange: return Color(hex: "fb923c")
+        case .red:    return Color(hex: "E24B4A")
+        case .pink:   return Color(hex: "f472b6")
+        case .purple: return Color(hex: "a855f7")
+        case .gray:   return Color(hex: "5a6a8a")
         }
     }
 
     static func color(for name: String) -> Color {
-        FolderColor(rawValue: name)?.color ?? .blue
+        FolderColor(rawValue: name)?.color ?? Color(hex: "7C6FF7")
     }
 }

@@ -11,6 +11,11 @@ struct ContentView: View {
                 .tabItem {
                     Label("Home", systemImage: "house.fill")
                 }
+            
+            NotesView()
+                .tabItem {
+                    Label("Notes", systemImage: "note.text")
+                }
  
             CalendarView()
                 .tabItem {
