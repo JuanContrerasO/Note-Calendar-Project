@@ -2,10 +2,20 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
+// MARK: - Drag Payload
+/// Carries note/folder identity across drag sessions
+struct DragItem: Codable {
+    enum Kind: String, Codable { case note, folder }
+    let kind: Kind
+    let id: String
+}
+
+// MARK: - NotesView
 struct NotesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var notes: [Note]
-    @Query private var folders: [Folder]
+    @Query(sort: \Note.sortOrder)   private var notes: [Note]
+    @Query(sort: \Folder.sortOrder) private var folders: [Folder]
+
     @State private var isEditing = false
     @State private var showingAddOptions = false
     @State private var showingAddNote = false
@@ -18,6 +28,7 @@ struct NotesView: View {
     @State private var selectedNoteForActions: Note?
     @State private var showingFolderActions = false
     @State private var showingNoteActions = false
+    @State private var dropTargetFolderID: PersistentIdentifier?
 
     var body: some View {
         NavigationStack {
@@ -27,9 +38,7 @@ struct NotesView: View {
                 .toolbarColorScheme(.dark, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button(isEditing ? "Done" : "Edit") {
-                            isEditing.toggle()
-                        }
+                        Button(isEditing ? "Done" : "Edit") { isEditing.toggle() }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(action: { showingAddOptions = true }) {
@@ -79,6 +88,8 @@ struct NotesView: View {
         }
     }
 
+    // MARK: - Main List
+
     @ViewBuilder
     private var mainList: some View {
         List {
@@ -87,24 +98,40 @@ struct NotesView: View {
                     ForEach(sortedFolders) { folder in
                         folderSection(folder)
                     }
+                    .onMove { moveFolders(from: $0, to: $1) }
                 }
             }
 
             Section("Notes") {
                 ForEach(unfiledNotes) { note in
                     noteRow(note)
+                        .dropDestination(for: Data.self) { items, _ in
+                            handleNoteDrop(items, beforeNote: note, intoFolder: nil)
+                        } isTargeted: { _ in }
                 }
+                .onMove { moveUnfiledNotes(from: $0, to: $1) }
+
+                // Invisible drop zone at the bottom to un-file a note
+                Color.clear.frame(height: 1)
+                    .dropDestination(for: Data.self) { items, _ in
+                        handleNoteDrop(items, beforeNote: nil, intoFolder: nil)
+                    } isTargeted: { _ in }
             }
         }
         .scrollContentBackground(.hidden)
         .background(Color(hex: "0F1629"))
+        .environment(\.editMode, isEditing ? .constant(.active) : .constant(.inactive))
     }
+
+    // MARK: - Folder Section
 
     @ViewBuilder
     private func folderSection(_ folder: Folder) -> some View {
         let folderNotes = sortedNotes(in: folder)
+        let isDropTarget = dropTargetFolderID == folder.persistentModelID
+
         VStack(spacing: 0) {
-            folderRow(folder, notes: folderNotes)
+            folderHeaderRow(folder, notes: folderNotes)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     if isEditing {
@@ -114,13 +141,21 @@ struct NotesView: View {
                         toggleExpanded(folder)
                     }
                 }
-                .onDrop(of: [UTType.text], isTargeted: nil) { providers in
-                    handleDrop(providers, to: folder)
+                // Folder itself is draggable (reorder folders)
+                .draggable(encoded(.folder, id: folder.id.uuidString))
+                // Folder header is a drop target (move a note into this folder)
+                .dropDestination(for: Data.self) { items, _ in
+                    dropTargetFolderID = nil
+                    return handleNoteDrop(items, beforeNote: nil, intoFolder: folder)
+                } isTargeted: { targeted in
+                    dropTargetFolderID = targeted ? folder.persistentModelID : nil
                 }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(hex: "7C6FF7"), lineWidth: isDropTarget ? 2 : 0)
+                )
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        deleteFolder(folder)
-                    } label: {
+                    Button(role: .destructive) { deleteFolder(folder) } label: {
                         Label("Delete", systemImage: "trash")
                     }
                 }
@@ -129,18 +164,23 @@ struct NotesView: View {
                 ForEach(folderNotes) { note in
                     noteRow(note)
                         .padding(.leading, 24)
+                        .dropDestination(for: Data.self) { items, _ in
+                            handleNoteDrop(items, beforeNote: note, intoFolder: folder)
+                        } isTargeted: { _ in }
                 }
+                .onMove { moveNotesInFolder(folder, from: $0, to: $1) }
             }
         }
     }
 
-    private func folderRow(_ folder: Folder, notes: [Note]) -> some View {
+    // MARK: - Row Views
+
+    private func folderHeaderRow(_ folder: Folder, notes: [Note]) -> some View {
         let latestDate = notes.first?.createdAt ?? folder.createdAt
         return HStack(spacing: 12) {
             Circle()
                 .fill(FolderColor.color(for: folder.colorName))
                 .frame(width: 12, height: 12)
-
             VStack(alignment: .leading, spacing: 2) {
                 Text(folder.name)
                     .font(.headline)
@@ -149,9 +189,7 @@ struct NotesView: View {
                     .font(.caption)
                     .foregroundColor(Color(hex: "5a6a8a"))
             }
-
             Spacer()
-
             Image(systemName: expandedFolderIDs.contains(folder.persistentModelID) ? "chevron.down" : "chevron.right")
                 .font(.caption)
                 .foregroundColor(Color(hex: "5a6a8a"))
@@ -170,9 +208,7 @@ struct NotesView: View {
                     .foregroundColor(Color(hex: "5a6a8a"))
                     .lineLimit(2)
             }
-
             Spacer()
-
             Text(note.createdAt, style: .date)
                 .font(.caption)
                 .foregroundColor(Color(hex: "5a6a8a"))
@@ -187,65 +223,102 @@ struct NotesView: View {
                 noteToView = note
             }
         }
-        .onDrag {
-            NSItemProvider(object: note.id.uuidString as NSString)
-        }
+        .draggable(encoded(.note, id: note.id.uuidString))
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                modelContext.delete(note)
-            } label: {
+            Button(role: .destructive) { modelContext.delete(note) } label: {
                 Label("Delete", systemImage: "trash")
             }
         }
     }
 
-    private var sortedFolders: [Folder] {
-        folders.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    // MARK: - Drag & Drop
+
+    private func encoded(_ kind: DragItem.Kind, id: String) -> Data {
+        (try? JSONEncoder().encode(DragItem(kind: kind, id: id))) ?? Data()
     }
 
-    private var unfiledNotes: [Note] {
-        notes
-            .filter { $0.folder == nil }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
+    /// Handle a note being dropped — moves it into `intoFolder` (or un-files it),
+    /// and places it before `beforeNote` if provided.
+    @discardableResult
+    private func handleNoteDrop(_ items: [Data], beforeNote: Note?, intoFolder: Folder?) -> Bool {
+        guard
+            let data = items.first,
+            let drag = try? JSONDecoder().decode(DragItem.self, from: data),
+            drag.kind == .note,
+            let uuid = UUID(uuidString: drag.id),
+            let note = notes.first(where: { $0.id == uuid })
+        else { return false }
 
-    private func sortedNotes(in folder: Folder) -> [Note] {
-        folder.notes.sorted { $0.createdAt > $1.createdAt }
-    }
+        // Change folder membership
+        note.folder = intoFolder
+        if let intoFolder { expandedFolderIDs.insert(intoFolder.persistentModelID) }
 
-    private func toggleExpanded(_ folder: Folder) {
-        let id = folder.persistentModelID
-        if expandedFolderIDs.contains(id) {
-            expandedFolderIDs.remove(id)
+        // Re-position within the target list
+        var siblings: [Note]
+        if let intoFolder {
+            siblings = sortedNotes(in: intoFolder).filter { $0.id != note.id }
         } else {
-            expandedFolderIDs.insert(id)
-        }
-    }
-
-    private func handleDrop(_ providers: [NSItemProvider], to folder: Folder) -> Bool {
-        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSString.self) }) else {
-            return false
+            siblings = unfiledNotes.filter { $0.id != note.id }
         }
 
-        provider.loadObject(ofClass: NSString.self) { object, _ in
-            guard let idString = object as? NSString,
-                  let noteID = UUID(uuidString: idString as String) else { return }
-
-            DispatchQueue.main.async {
-                if let note = notes.first(where: { $0.id == noteID }) {
-                    note.folder = folder
-                    expandedFolderIDs.insert(folder.persistentModelID)
-                }
-            }
+        if let beforeNote, let idx = siblings.firstIndex(where: { $0.id == beforeNote.id }) {
+            siblings.insert(note, at: idx)
+        } else {
+            siblings.append(note)
         }
+        for (i, n) in siblings.enumerated() { n.sortOrder = i }
 
+        try? modelContext.save()
         return true
     }
 
+    // MARK: - Move Handlers (Edit-mode handles)
+
+    private func moveFolders(from indices: IndexSet, to destination: Int) {
+        var list = sortedFolders
+        list.move(fromOffsets: indices, toOffset: destination)
+        for (i, f) in list.enumerated() { f.sortOrder = i }
+        try? modelContext.save()
+    }
+
+    private func moveUnfiledNotes(from indices: IndexSet, to destination: Int) {
+        var list = unfiledNotes
+        list.move(fromOffsets: indices, toOffset: destination)
+        for (i, n) in list.enumerated() { n.sortOrder = i }
+        try? modelContext.save()
+    }
+
+    private func moveNotesInFolder(_ folder: Folder, from indices: IndexSet, to destination: Int) {
+        var list = sortedNotes(in: folder)
+        list.move(fromOffsets: indices, toOffset: destination)
+        for (i, n) in list.enumerated() { n.sortOrder = i }
+        try? modelContext.save()
+    }
+
+    // MARK: - Computed Collections
+
+    private var sortedFolders: [Folder] {
+        folders.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    private var unfiledNotes: [Note] {
+        notes.filter { $0.folder == nil }.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    private func sortedNotes(in folder: Folder) -> [Note] {
+        folder.notes.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    // MARK: - Helpers
+
+    private func toggleExpanded(_ folder: Folder) {
+        let id = folder.persistentModelID
+        if expandedFolderIDs.contains(id) { expandedFolderIDs.remove(id) }
+        else { expandedFolderIDs.insert(id) }
+    }
+
     private func deleteFolder(_ folder: Folder) {
-        for note in folder.notes {
-            note.folder = nil
-        }
+        for note in folder.notes { note.folder = nil }
         modelContext.delete(folder)
     }
 }
@@ -272,25 +345,19 @@ struct AddNoteView: View {
                         .submitLabel(.next)
                         .onSubmit { focusedField = .content }
                         .foregroundColor(Color(hex: "e8edf5"))
-
                     TextEditor(text: $content)
                         .focused($focusedField, equals: .content)
                         .frame(minHeight: 200)
-                        .submitLabel(.done)
-                        .onSubmit { focusedField = nil }
                         .foregroundColor(Color(hex: "e8edf5"))
                         .scrollContentBackground(.hidden)
                 }
-
                 if !folders.isEmpty {
                     Section("Folder") {
                         Picker("Folder", selection: $selectedFolderID) {
                             Text("None").tag(Optional<PersistentIdentifier>.none)
                             ForEach(folders) { folder in
                                 HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(FolderColor.color(for: folder.colorName))
-                                        .frame(width: 10, height: 10)
+                                    Circle().fill(FolderColor.color(for: folder.colorName)).frame(width: 10, height: 10)
                                     Text(folder.name)
                                 }
                                 .tag(Optional(folder.persistentModelID))
@@ -307,13 +374,10 @@ struct AddNoteView: View {
             .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    CancelButton(didPressCancel: $didPressCancel)
-                }
+                ToolbarItem(placement: .cancellationAction) { CancelButton(didPressCancel: $didPressCancel) }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(Color(hex: "7C6FF7"))
+                    Button("Done") { focusedField = nil }.foregroundColor(Color(hex: "7C6FF7"))
                 }
             }
         }
@@ -358,12 +422,9 @@ struct EditNoteView: View {
                         .submitLabel(.next)
                         .onSubmit { focusedField = .content }
                         .foregroundColor(Color(hex: "e8edf5"))
-
                     TextEditor(text: $editedContent)
                         .focused($focusedField, equals: .content)
                         .frame(minHeight: 200)
-                        .submitLabel(.done)
-                        .onSubmit { focusedField = nil }
                         .foregroundColor(Color(hex: "e8edf5"))
                         .scrollContentBackground(.hidden)
                 }
@@ -375,13 +436,10 @@ struct EditNoteView: View {
             .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    CancelButton(didPressCancel: $didPressCancel)
-                }
+                ToolbarItem(placement: .cancellationAction) { CancelButton(didPressCancel: $didPressCancel) }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") { focusedField = nil }
-                        .foregroundColor(Color(hex: "7C6FF7"))
+                    Button("Done") { focusedField = nil }.foregroundColor(Color(hex: "7C6FF7"))
                 }
             }
         }
@@ -398,32 +456,20 @@ struct AddFolderView: View {
     @Environment(\.dismiss) var dismiss
     @State private var name = ""
     @State private var selectedColorName = FolderColor.blue.rawValue
-
     private let gridColumns = [GridItem(.adaptive(minimum: 36), spacing: 12)]
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Name") {
-                    TextField("Folder Name", text: $name)
-                        .foregroundColor(Color(hex: "e8edf5"))
+                    TextField("Folder Name", text: $name).foregroundColor(Color(hex: "e8edf5"))
                 }
                 Section("Color") {
                     LazyVGrid(columns: gridColumns, spacing: 12) {
                         ForEach(FolderColor.allCases) { color in
-                            Button {
-                                selectedColorName = color.rawValue
-                            } label: {
-                                Circle()
-                                    .fill(color.color)
-                                    .frame(width: 24, height: 24)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(
-                                                selectedColorName == color.rawValue ? Color(hex: "e8edf5") : Color.clear,
-                                                lineWidth: 2
-                                            )
-                                    )
+                            Button { selectedColorName = color.rawValue } label: {
+                                Circle().fill(color.color).frame(width: 24, height: 24)
+                                    .overlay(Circle().stroke(selectedColorName == color.rawValue ? Color(hex: "e8edf5") : Color.clear, lineWidth: 2))
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(color.label)
@@ -438,9 +484,7 @@ struct AddFolderView: View {
             .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let folder = Folder(name: name, createdAt: Date(), colorName: selectedColorName)
@@ -459,32 +503,20 @@ struct AddFolderView: View {
 struct EditFolderView: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var folder: Folder
-
     private let gridColumns = [GridItem(.adaptive(minimum: 36), spacing: 12)]
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Name") {
-                    TextField("Folder Name", text: $folder.name)
-                        .foregroundColor(Color(hex: "e8edf5"))
+                    TextField("Folder Name", text: $folder.name).foregroundColor(Color(hex: "e8edf5"))
                 }
                 Section("Color") {
                     LazyVGrid(columns: gridColumns, spacing: 12) {
                         ForEach(FolderColor.allCases) { color in
-                            Button {
-                                folder.colorName = color.rawValue
-                            } label: {
-                                Circle()
-                                    .fill(color.color)
-                                    .frame(width: 24, height: 24)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(
-                                                folder.colorName == color.rawValue ? Color(hex: "e8edf5") : Color.clear,
-                                                lineWidth: 2
-                                            )
-                                    )
+                            Button { folder.colorName = color.rawValue } label: {
+                                Circle().fill(color.color).frame(width: 24, height: 24)
+                                    .overlay(Circle().stroke(folder.colorName == color.rawValue ? Color(hex: "e8edf5") : Color.clear, lineWidth: 2))
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(color.label)
@@ -499,9 +531,7 @@ struct EditFolderView: View {
             .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { dismiss() }
                         .disabled(folder.name.trimmed.isEmpty)
@@ -519,7 +549,6 @@ struct NoteDetailView: View {
     @State private var editedTitle: String
     @State private var editedContent: String
     @FocusState private var focusedField: Field?
-
     enum Field { case title, content }
 
     init(note: Note) {
@@ -532,27 +561,20 @@ struct NoteDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 TextField("Title", text: $editedTitle)
-                    .font(.title)
-                    .bold()
+                    .font(.title).bold()
                     .foregroundColor(Color(hex: "e8edf5"))
                     .focused($focusedField, equals: .title)
                     .submitLabel(.next)
                     .onSubmit { focusedField = .content }
-
                 Text(note.createdAt, style: .date)
                     .font(.caption)
                     .foregroundColor(Color(hex: "5a6a8a"))
-
-                Divider()
-                    .overlay(Color(hex: "1e2c45"))
-
+                Divider().overlay(Color(hex: "1e2c45"))
                 TextEditor(text: $editedContent)
                     .frame(minHeight: 200)
                     .foregroundColor(Color(hex: "e8edf5"))
                     .scrollContentBackground(.hidden)
                     .focused($focusedField, equals: .content)
-                    .submitLabel(.done)
-                    .onSubmit { focusedField = nil }
             }
             .padding()
         }
@@ -563,8 +585,7 @@ struct NoteDetailView: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { focusedField = nil }
-                    .foregroundColor(Color(hex: "7C6FF7"))
+                Button("Done") { focusedField = nil }.foregroundColor(Color(hex: "7C6FF7"))
             }
         }
         .onDisappear {

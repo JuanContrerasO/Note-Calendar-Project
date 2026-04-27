@@ -7,12 +7,14 @@ final class Folder {
     var name: String
     var createdAt: Date
     var colorName: String
+    var sortOrder: Int
     @Relationship var notes: [Note] = []
 
-    init(name: String, createdAt: Date, colorName: String = "blue") {
+    init(name: String, createdAt: Date, colorName: String = "blue", sortOrder: Int = 0) {
         self.name = name
         self.createdAt = createdAt
         self.colorName = colorName
+        self.sortOrder = sortOrder
     }
 }
 
@@ -22,20 +24,22 @@ final class Note {
     var title: String
     var content: String
     var createdAt: Date
+    var sortOrder: Int
     @Relationship(inverse: \Folder.notes) var folder: Folder?
 
-    init(title: String, content: String, createdAt: Date, folder: Folder? = nil) {
+    init(title: String, content: String, createdAt: Date, folder: Folder? = nil, sortOrder: Int = 0) {
         self.id = UUID()
         self.title = title
         self.content = content
         self.createdAt = createdAt
         self.folder = folder
+        self.sortOrder = sortOrder
     }
 }
 
 @Model
 final class TaskItem {
-    @Attribute(.unique) var id = UUID()   
+    @Attribute(.unique) var id = UUID()
     var title: String
     var date: Date
     var isCompleted: Bool
