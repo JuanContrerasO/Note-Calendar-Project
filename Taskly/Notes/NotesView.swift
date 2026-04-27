@@ -3,7 +3,6 @@ import SwiftData
 import UniformTypeIdentifiers
 
 // MARK: - Drag Payload
-/// Carries note/folder identity across drag sessions
 struct DragItem: Codable {
     enum Kind: String, Codable { case note, folder }
     let kind: Kind
@@ -111,7 +110,6 @@ struct NotesView: View {
                 }
                 .onMove { moveUnfiledNotes(from: $0, to: $1) }
 
-                // Invisible drop zone at the bottom to un-file a note
                 Color.clear.frame(height: 1)
                     .dropDestination(for: Data.self) { items, _ in
                         handleNoteDrop(items, beforeNote: nil, intoFolder: nil)
@@ -141,9 +139,7 @@ struct NotesView: View {
                         toggleExpanded(folder)
                     }
                 }
-                // Folder itself is draggable (reorder folders)
                 .draggable(encoded(.folder, id: folder.id.uuidString))
-                // Folder header is a drop target (move a note into this folder)
                 .dropDestination(for: Data.self) { items, _ in
                     dropTargetFolderID = nil
                     return handleNoteDrop(items, beforeNote: nil, intoFolder: folder)
@@ -237,8 +233,6 @@ struct NotesView: View {
         (try? JSONEncoder().encode(DragItem(kind: kind, id: id))) ?? Data()
     }
 
-    /// Handle a note being dropped — moves it into `intoFolder` (or un-files it),
-    /// and places it before `beforeNote` if provided.
     @discardableResult
     private func handleNoteDrop(_ items: [Data], beforeNote: Note?, intoFolder: Folder?) -> Bool {
         guard
@@ -249,11 +243,9 @@ struct NotesView: View {
             let note = notes.first(where: { $0.id == uuid })
         else { return false }
 
-        // Change folder membership
         note.folder = intoFolder
         if let intoFolder { expandedFolderIDs.insert(intoFolder.persistentModelID) }
 
-        // Re-position within the target list
         var siblings: [Note]
         if let intoFolder {
             siblings = sortedNotes(in: intoFolder).filter { $0.id != note.id }
@@ -267,12 +259,11 @@ struct NotesView: View {
             siblings.append(note)
         }
         for (i, n) in siblings.enumerated() { n.sortOrder = i }
-
         try? modelContext.save()
         return true
     }
 
-    // MARK: - Move Handlers (Edit-mode handles)
+    // MARK: - Move Handlers
 
     private func moveFolders(from indices: IndexSet, to destination: Int) {
         var list = sortedFolders
@@ -542,12 +533,16 @@ struct EditFolderView: View {
     }
 }
 
-// MARK: - Note Detail View
+// MARK: - Note Detail View (with export)
 struct NoteDetailView: View {
     let note: Note
     @Environment(\.modelContext) private var modelContext
     @State private var editedTitle: String
     @State private var editedContent: String
+    @State private var showingExportOptions = false
+    @State private var exportURL: URL?
+    @State private var showingShareSheet = false
+    @State private var showingExportError = false
     @FocusState private var focusedField: Field?
     enum Field { case title, content }
 
@@ -566,10 +561,13 @@ struct NoteDetailView: View {
                     .focused($focusedField, equals: .title)
                     .submitLabel(.next)
                     .onSubmit { focusedField = .content }
+
                 Text(note.createdAt, style: .date)
                     .font(.caption)
                     .foregroundColor(Color(hex: "5a6a8a"))
+
                 Divider().overlay(Color(hex: "1e2c45"))
+
                 TextEditor(text: $editedContent)
                     .frame(minHeight: 200)
                     .foregroundColor(Color(hex: "e8edf5"))
@@ -583,13 +581,155 @@ struct NoteDetailView: View {
         .toolbarBackground(Color(hex: "0F1629"), for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                // Export menu
+                Menu {
+                    Button {
+                        exportAsPDF()
+                    } label: {
+                        Label("Export as PDF", systemImage: "doc.richtext.fill")
+                    }
+                    Button {
+                        exportAsTXT()
+                    } label: {
+                        Label("Export as .txt", systemImage: "doc.plaintext.fill")
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.doc.fill")
+                        .foregroundColor(Color(hex: "7C6FF7"))
+                }
+            }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("Done") { focusedField = nil }.foregroundColor(Color(hex: "7C6FF7"))
             }
         }
+        .confirmationDialog("Export Note", isPresented: $showingExportOptions, titleVisibility: .visible) {
+            Button("Export as PDF") { exportAsPDF() }
+            Button("Export as .txt") { exportAsTXT() }
+            Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $showingShareSheet, onDismiss: cleanupExport) {
+            if let url = exportURL {
+                ShareSheet(activityItems: [url])
+            }
+        }
+        .alert("Export Failed", isPresented: $showingExportError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Could not export the note. Please try again.")
+        }
         .onDisappear {
             NoteSaver.saveOrDelete(note: note, title: editedTitle, content: editedContent, context: modelContext)
+        }
+    }
+
+    // MARK: - Export as PDF
+
+    private func exportAsPDF() {
+        let safeTitle = editedTitle.trimmed.isEmpty ? "Note" : editedTitle
+        let pageWidth: CGFloat = 612   // US Letter width in points
+        let pageHeight: CGFloat = 792
+        let margin: CGFloat = 56
+
+        let pdfData = NSMutableData()
+        let pageRect = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
+        UIGraphicsBeginPDFContextToData(pdfData, pageRect, [
+            kCGPDFContextTitle as String: safeTitle
+        ])
+
+        // Layout the full text first so we know how many pages we need
+        let titleFont = UIFont.boldSystemFont(ofSize: 22)
+        let bodyFont = UIFont.systemFont(ofSize: 14)
+        let dateFont = UIFont.systemFont(ofSize: 11)
+
+        let textColor = UIColor(red: 0.91, green: 0.93, blue: 0.96, alpha: 1) // e8edf5
+        let bgColor   = UIColor(red: 0.059, green: 0.086, blue: 0.161, alpha: 1) // 0F1629
+        let subColor  = UIColor(red: 0.353, green: 0.416, blue: 0.541, alpha: 1) // 5a6a8a
+
+        let contentWidth = pageWidth - margin * 2
+        var yOffset: CGFloat = margin
+
+        func beginPage() {
+            UIGraphicsBeginPDFPage()
+            // Dark background
+            bgColor.setFill()
+            UIRectFill(pageRect)
+            yOffset = margin
+        }
+
+        func drawText(_ string: String, font: UIFont, color: UIColor, maxWidth: CGFloat) {
+            let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+            let nsStr = string as NSString
+            let size = nsStr.boundingRect(
+                with: CGSize(width: maxWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: attrs, context: nil
+            ).size
+
+            if yOffset + size.height > pageHeight - margin {
+                beginPage()
+            }
+            nsStr.draw(
+                with: CGRect(x: margin, y: yOffset, width: maxWidth, height: size.height),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: attrs, context: nil
+            )
+            yOffset += size.height
+        }
+
+        beginPage()
+        drawText(safeTitle, font: titleFont, color: textColor, maxWidth: contentWidth)
+        yOffset += 4
+
+        let dateString = note.createdAt.formatted(date: .long, time: .shortened)
+        drawText(dateString, font: dateFont, color: subColor, maxWidth: contentWidth)
+        yOffset += 12
+
+        // Divider line
+        subColor.setFill()
+        UIRectFill(CGRect(x: margin, y: yOffset, width: contentWidth, height: 0.5))
+        yOffset += 12
+
+        let bodyText = editedContent.trimmed.isEmpty ? "(No content)" : editedContent
+        drawText(bodyText, font: bodyFont, color: textColor, maxWidth: contentWidth)
+
+        UIGraphicsEndPDFContext()
+
+        let fileName = "\(safeTitle).pdf"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        do {
+            try pdfData.write(to: tempURL, options: .atomic)
+            exportURL = tempURL
+            showingShareSheet = true
+        } catch {
+            showingExportError = true
+        }
+    }
+
+    // MARK: - Export as TXT
+
+    private func exportAsTXT() {
+        let safeTitle = editedTitle.trimmed.isEmpty ? "Note" : editedTitle
+        let dateString = note.createdAt.formatted(date: .long, time: .shortened)
+        let body = editedContent.trimmed.isEmpty ? "(No content)" : editedContent
+        let fullText = "\(safeTitle)\n\(dateString)\n\n\(body)"
+
+        let fileName = "\(safeTitle).txt"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        do {
+            try fullText.write(to: tempURL, atomically: true, encoding: .utf8)
+            exportURL = tempURL
+            showingShareSheet = true
+        } catch {
+            showingExportError = true
+        }
+    }
+
+    private func cleanupExport() {
+        if let url = exportURL {
+            try? FileManager.default.removeItem(at: url)
+            exportURL = nil
         }
     }
 }
