@@ -8,6 +8,7 @@ final class Folder {
     var createdAt: Date
     var colorName: String
     var sortOrder: Int
+    @Attribute(.unique) var id: UUID
     @Relationship var notes: [Note] = []
 
     init(name: String, createdAt: Date, colorName: String = "blue", sortOrder: Int = 0) {
@@ -15,6 +16,7 @@ final class Folder {
         self.createdAt = createdAt
         self.colorName = colorName
         self.sortOrder = sortOrder
+        self.id = UUID()
     }
 }
 
