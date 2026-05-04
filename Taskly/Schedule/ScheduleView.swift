@@ -52,6 +52,11 @@ struct ScheduleView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
+            .onAppear {
+                Task {
+                    await calendarManager.requestAccess()
+                }
+            }
         }
         .environment(calendarManager)
     }
