@@ -189,7 +189,9 @@ struct DrawingCanvasView: View {
         do {
             try pdfData.write(to: tempURL, options: .atomic)
             exportURL = tempURL
-            showingShareSheet = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                showingShareSheet = true
+            }
         } catch {
             showingExportError = true
         }
