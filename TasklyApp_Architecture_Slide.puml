@@ -1,0 +1,74 @@
+@startuml TasklyApp_Slide_Architecture
+!theme plain
+skinparam linetype ortho
+skinparam padding 10
+skinparam fontSize 11
+skinparam classBackgroundColor #E1F5FF
+skinparam classBorderColor #01579B
+
+title Taskly - Architecture Overview
+
+' ====================================================
+' LAYER 1: APP ENTRY
+' ====================================================
+rectangle "APP" #FF6B6B [
+    **TasklyApp**
+    Initialize & Setup
+]
+
+' ====================================================
+' LAYER 2: NAVIGATION
+' ====================================================
+rectangle "NAVIGATION" #FFA726 [
+    **ContentView**
+    5 Tab Router
+]
+
+' ====================================================
+' LAYER 3: MAIN VIEWS
+' ====================================================
+rectangle "MAIN VIEWS" #FFD54F [
+    **Home** | **Notes** | **Calendar**
+    **Drawing** | **Schedule**
+]
+
+' ====================================================
+' LAYER 4: SUB-VIEWS & SERVICES
+' ====================================================
+rectangle "SUB-VIEWS & SERVICES" #81C784 [
+    **Notes:** AddNote, NoteDetail, Folder
+    **Calendar:** AddTask, EditTask
+    **Drawing:** AddDrawing, Canvas
+    **Schedule:** AddCourse, EditCourse
+    
+    **Services:** CalendarManager
+    NotificationManager, NoteSaver
+]
+
+' ====================================================
+' LAYER 5: UTILITIES & APIs
+' ====================================================
+rectangle "UTILITIES & APIS" #FFE0B2 [
+    **Utilities:** CanvasView, Extensions
+    **Frameworks:** SwiftData | EventKit
+    UserNotifications | PencilKit
+]
+
+' ====================================================
+' LAYER 6: DATA MODELS
+' ====================================================
+rectangle "DATA MODELS" #B2DFDB [
+    **Folder** | **Note** | **TaskItem**
+    **DrawingNote** | **Course** | **Home**
+]
+
+' ====================================================
+' CONNECTIONS
+' ====================================================
+TasklyApp --> ContentView: init
+ContentView --> "MAIN VIEWS": routes
+"MAIN VIEWS" --> "SUB-VIEWS & SERVICES": creates
+"SUB-VIEWS & SERVICES" --> "UTILITIES & APIs": uses
+"UTILITIES & APIs" --> "DATA MODELS": manages
+
+@enduml
