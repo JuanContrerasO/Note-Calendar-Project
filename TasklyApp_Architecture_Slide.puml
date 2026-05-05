@@ -2,73 +2,86 @@
 !theme plain
 skinparam linetype ortho
 skinparam padding 10
-skinparam fontSize 11
-skinparam classBackgroundColor #E1F5FF
-skinparam classBorderColor #01579B
+skinparam fontSize 12
 
 title Taskly - Architecture Overview
 
 ' ====================================================
 ' LAYER 1: APP ENTRY
 ' ====================================================
-rectangle "APP" #FF6B6B [
-    **TasklyApp**
-    Initialize & Setup
-]
+package "APP" #FF6B6B {
+    card TasklyApp [
+        <b>TasklyApp</b>
+        ---
+        Initialize & Setup
+    ]
+}
 
 ' ====================================================
 ' LAYER 2: NAVIGATION
 ' ====================================================
-rectangle "NAVIGATION" #FFA726 [
-    **ContentView**
-    5 Tab Router
-]
+package "NAVIGATION" #FFA726 {
+    card ContentView [
+        <b>ContentView</b>
+        ---
+        5 Tab Router
+    ]
+}
 
 ' ====================================================
 ' LAYER 3: MAIN VIEWS
 ' ====================================================
-rectangle "MAIN VIEWS" #FFD54F [
-    **Home** | **Notes** | **Calendar**
-    **Drawing** | **Schedule**
-]
+package "MAIN VIEWS" #FFD54F {
+    card MainViews [
+        <b>Home | Notes | Calendar</b>
+        <b>Drawing | Schedule</b>
+    ]
+}
 
 ' ====================================================
 ' LAYER 4: SUB-VIEWS & SERVICES
 ' ====================================================
-rectangle "SUB-VIEWS & SERVICES" #81C784 [
-    **Notes:** AddNote, NoteDetail, Folder
-    **Calendar:** AddTask, EditTask
-    **Drawing:** AddDrawing, Canvas
-    **Schedule:** AddCourse, EditCourse
-    
-    **Services:** CalendarManager
-    NotificationManager, NoteSaver
-]
+package "SUB-VIEWS & SERVICES" #81C784 {
+    card SubViews [
+        <b>Notes:</b> AddNote, NoteDetail, Folder
+        <b>Calendar:</b> AddTask, EditTask
+        <b>Drawing:</b> AddDrawing, Canvas
+        <b>Schedule:</b> AddCourse, EditCourse
+        ---
+        <b>Services:</b> CalendarManager
+        NotificationManager, NoteSaver
+    ]
+}
 
 ' ====================================================
 ' LAYER 5: UTILITIES & APIs
 ' ====================================================
-rectangle "UTILITIES & APIS" #FFE0B2 [
-    **Utilities:** CanvasView, Extensions
-    **Frameworks:** SwiftData | EventKit
-    UserNotifications | PencilKit
-]
+package "UTILITIES & APIS" #FFE0B2 {
+    card UtilitiesAPIs [
+        <b>Utilities:</b> CanvasView, Extensions
+        ---
+        <b>Frameworks:</b> SwiftData | EventKit
+        UserNotifications | PencilKit
+    ]
+}
 
 ' ====================================================
 ' LAYER 6: DATA MODELS
 ' ====================================================
-rectangle "DATA MODELS" #B2DFDB [
-    **Folder** | **Note** | **TaskItem**
-    **DrawingNote** | **Course** | **Home**
-]
+package "DATA MODELS" #B2DFDB {
+    card DataModels [
+        <b>Folder | Note | TaskItem</b>
+        <b>DrawingNote | Course | Home</b>
+    ]
+}
 
 ' ====================================================
 ' CONNECTIONS
 ' ====================================================
 TasklyApp --> ContentView: init
-ContentView --> "MAIN VIEWS": routes
-"MAIN VIEWS" --> "SUB-VIEWS & SERVICES": creates
-"SUB-VIEWS & SERVICES" --> "UTILITIES & APIs": uses
-"UTILITIES & APIs" --> "DATA MODELS": manages
+ContentView --> MainViews: routes
+MainViews --> SubViews: creates
+SubViews --> UtilitiesAPIs: uses
+UtilitiesAPIs --> DataModels: manages
 
 @enduml
