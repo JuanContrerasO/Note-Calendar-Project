@@ -1,87 +1,235 @@
 @startuml TasklyApp_Slide_Architecture
 !theme plain
 skinparam linetype ortho
-skinparam padding 10
-skinparam fontSize 12
+skinparam padding 20
+skinparam fontSize 14
+skinparam defaultFontName Arial
+skinparam maxClassWidth 300
 
-title Taskly - Architecture Overview
+title Taskly - Complete Architecture
 
 ' ====================================================
 ' LAYER 1: APP ENTRY
 ' ====================================================
-package "APP" #FF6B6B {
-    card TasklyApp [
-        <b>TasklyApp</b>
-        ---
-        Initialize & Setup
-    ]
+package "🔷 APP LAYER" #FF6B6B {
+    class TasklyApp {
+        Initialize App
+        Setup SwiftData Schema
+        Configure ModelContainer
+    }
 }
 
 ' ====================================================
 ' LAYER 2: NAVIGATION
 ' ====================================================
-package "NAVIGATION" #FFA726 {
-    card ContentView [
-        <b>ContentView</b>
-        ---
-        5 Tab Router
-    ]
+package "🔶 NAVIGATION LAYER" #FFA726 {
+    class ContentView {
+        Tab Navigation Hub
+        Route to 5 Main Views
+        Welcome Sheet Manager
+    }
 }
 
 ' ====================================================
 ' LAYER 3: MAIN VIEWS
 ' ====================================================
-package "MAIN VIEWS" #FFD54F {
-    card MainViews [
-        <b>Home | Notes | Calendar</b>
-        <b>Drawing | Schedule</b>
-    ]
+package "🟡 MAIN VIEWS (5 Tabs)" #FFD54F {
+    class HomeView {
+        Dashboard & Overview
+    }
+    class NotesView {
+        Notes & Folders List
+    }
+    class CalendarView {
+        Calendar & Tasks
+    }
+    class DrawingNotesView {
+        Drawing Gallery
+    }
+    class ScheduleView {
+        Course Schedule
+    }
 }
 
 ' ====================================================
 ' LAYER 4: SUB-VIEWS & SERVICES
 ' ====================================================
-package "SUB-VIEWS & SERVICES" #81C784 {
-    card SubViews [
-        <b>Notes:</b> AddNote, NoteDetail, Folder
-        <b>Calendar:</b> AddTask, EditTask
-        <b>Drawing:</b> AddDrawing, Canvas
-        <b>Schedule:</b> AddCourse, EditCourse
-        ---
-        <b>Services:</b> CalendarManager
-        NotificationManager, NoteSaver
-    ]
+package "🟢 NOTES SUB-VIEWS" #A5D6A7 {
+    class AddNoteView {
+        Create Note
+    }
+    class NoteDetailView {
+        View/Edit Note
+        Export PDF/TXT
+    }
+    class AddFolderView {
+        Create Folder
+    }
+}
+
+package "🔵 CALENDAR SUB-VIEWS" #81C784 {
+    class AddTaskView {
+        Create Task
+        Set Reminder
+    }
+    class EditTaskView {
+        Edit Task
+        Toggle Complete
+    }
+}
+
+package "🟣 DRAWING SUB-VIEWS" #BA68C8 {
+    class AddDrawingView {
+        New Drawing
+    }
+    class DrawingCanvasView {
+        Edit Drawing
+        Export PDF
+    }
+}
+
+package "⚫ SCHEDULE SUB-VIEWS" #78909C {
+    class AddCourseView {
+        Create Course
+    }
+    class EditCourseView {
+        Edit Schedule
+    }
+}
+
+package "🔧 SHARED SERVICES" #FFE0B2 {
+    class CalendarManager {
+        Request Access
+        Fetch/Save Events
+    }
+    class NotificationManager {
+        Schedule Reminders
+        Cancel Notifications
+    }
+    class NoteSaver {
+        Validate & Save Notes
+    }
+    class CanvasView {
+        PencilKit Wrapper
+        Drawing Interface
+    }
 }
 
 ' ====================================================
-' LAYER 5: UTILITIES & APIs
+' LAYER 5: UTILITIES & FRAMEWORKS
 ' ====================================================
-package "UTILITIES & APIS" #FFE0B2 {
-    card UtilitiesAPIs [
-        <b>Utilities:</b> CanvasView, Extensions
-        ---
-        <b>Frameworks:</b> SwiftData | EventKit
-        UserNotifications | PencilKit
-    ]
+package "📱 FRAMEWORKS" #C8E6C9 {
+    class SwiftData {
+        Data Persistence
+        Model Queries
+    }
+    class EventKit {
+        Calendar Access
+        Event Management
+    }
+    class UserNotifications {
+        Local Notifications
+    }
+    class PencilKit {
+        Drawing Tools
+    }
 }
 
 ' ====================================================
 ' LAYER 6: DATA MODELS
 ' ====================================================
-package "DATA MODELS" #B2DFDB {
-    card DataModels [
-        <b>Folder | Note | TaskItem</b>
-        <b>DrawingNote | Course | Home</b>
-    ]
+package "💾 DATA MODELS" #B2DFDB {
+    class Folder {
+        id, name, colorName
+        sortOrder, notes[]
+    }
+    class Note {
+        id, title, content
+        createdAt, folder
+    }
+    class TaskItem {
+        id, title, date
+        isCompleted, reminder
+    }
+    class DrawingNote {
+        title, drawingData
+    }
+    class Course {
+        name, instructor
+        location, schedule
+    }
+    class Home {
+        userName
+    }
 }
 
 ' ====================================================
-' CONNECTIONS
+' CONNECTIONS: Main Flow
 ' ====================================================
 TasklyApp --> ContentView: init
-ContentView --> MainViews: routes
-MainViews --> SubViews: creates
-SubViews --> UtilitiesAPIs: uses
-UtilitiesAPIs --> DataModels: manages
+ContentView --> HomeView
+ContentView --> NotesView
+ContentView --> CalendarView
+ContentView --> DrawingNotesView
+ContentView --> ScheduleView
+
+' ====================================================
+' CONNECTIONS: Notes Workflow
+' ====================================================
+NotesView --> AddNoteView: creates
+NotesView --> NoteDetailView: opens
+NotesView --> AddFolderView: creates
+
+' ====================================================
+' CONNECTIONS: Calendar Workflow
+' ====================================================
+CalendarView --> AddTaskView: creates
+CalendarView --> EditTaskView: edits
+
+' ====================================================
+' CONNECTIONS: Drawing Workflow
+' ====================================================
+DrawingNotesView --> AddDrawingView: creates
+DrawingNotesView --> DrawingCanvasView: opens
+AddDrawingView --> CanvasView: uses
+DrawingCanvasView --> CanvasView: uses
+
+' ====================================================
+' CONNECTIONS: Schedule Workflow
+' ====================================================
+ScheduleView --> AddCourseView: creates
+ScheduleView --> EditCourseView: edits
+
+' ====================================================
+' CONNECTIONS: Services
+' ====================================================
+AddNoteView --> NoteSaver: uses
+NoteDetailView --> NoteSaver: uses
+AddTaskView --> CalendarManager: syncs
+AddTaskView --> NotificationManager: schedules
+EditTaskView --> NotificationManager: updates
+AddCourseView --> CalendarManager: syncs
+EditCourseView --> CalendarManager: syncs
+
+' ====================================================
+' CONNECTIONS: External APIs
+' ====================================================
+CalendarManager --> EventKit: uses
+NotificationManager --> UserNotifications: uses
+CanvasView --> PencilKit: uses
+
+' ====================================================
+' CONNECTIONS: Data Layer
+' ====================================================
+NotesView --> SwiftData: queries
+CalendarView --> SwiftData: queries
+ScheduleView --> SwiftData: queries
+DrawingNotesView --> SwiftData: queries
+SwiftData --> Folder: manages
+SwiftData --> Note: manages
+SwiftData --> TaskItem: manages
+SwiftData --> DrawingNote: manages
+SwiftData --> Course: manages
+SwiftData --> Home: manages
 
 @enduml
