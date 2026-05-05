@@ -1,0 +1,344 @@
+@startuml TasklyApp_Hierarchical_Structure
+title Taskly - View Hierarchy: Main Views & Sub-Views (Folders/Categories)
+
+skinparam linetype ortho
+skinparam packageBorderColor #444
+skinparam backgroundColor #f0f0f0
+
+package "APP ENTRY POINT" {
+    class TasklyApp {
+        Responsibilities:
+        + Initialize app
+        + Setup data model
+        + Configure SwiftData schema
+        --
+        Collaborators:
+        ContentView
+    }
+}
+
+package "MAIN NAVIGATION HUB" {
+    class ContentView {
+        Responsibilities:
+        + Main tab navigation
+        + Manage welcome sheet
+        + Route to 5 main views
+        --
+        Collaborators:
+        HomeView, NotesView, CalendarView
+        DrawingNotesView, ScheduleView
+    }
+}
+
+package "HOME TAB" {
+    class HomeView {
+        Responsibilities:
+        + Display personalized dashboard
+        + Show overview cards
+        + Display next class
+        + Show recent notes & tasks
+        --
+        Collaborators:
+        TaskItem, Note, Course, Home
+    }
+}
+
+package "NOTES TAB - Main View" {
+    class NotesView {
+        Responsibilities:
+        + List all notes & folders
+        + Manage drag & drop
+        + Create/edit folders
+        + Navigate to details
+        --
+        Collaborators:
+        AddNoteView, AddFolderView
+        NoteDetailView, EditFolderView
+    }
+}
+
+package "NOTES TAB - Sub-Views" {
+    class AddNoteView {
+        Responsibilities:
+        + Create new note
+        + Select folder
+        --
+        Collaborators:
+        NoteSaver
+    }
+
+    class AddFolderView {
+        Responsibilities:
+        + Create new folder
+        + Set folder color
+        --
+        Collaborators:
+        Folder
+    }
+
+    class NoteDetailView {
+        Responsibilities:
+        + Display note content
+        + Edit title & content
+        + Export as PDF/TXT
+        + Save changes
+        --
+        Collaborators:
+        NoteSaver, Note
+    }
+
+    class EditFolderView {
+        Responsibilities:
+        + Rename folder
+        + Change folder color
+        --
+        Collaborators:
+        Folder
+    }
+}
+
+package "CALENDAR TAB - Main View" {
+    class CalendarView {
+        Responsibilities:
+        + Display calendar picker
+        + Show tasks & events
+        + Toggle task completion
+        + Navigate to edit
+        --
+        Collaborators:
+        AddTaskView, EditTaskView
+        CalendarManager, TaskItem
+    }
+}
+
+package "CALENDAR TAB - Sub-Views" {
+    class AddTaskView {
+        Responsibilities:
+        + Create new task
+        + Set date & time
+        + Set reminder
+        + Optional calendar sync
+        --
+        Collaborators:
+        CalendarManager, TaskItem
+    }
+
+    class EditTaskView {
+        Responsibilities:
+        + Edit task details
+        + Change date/time
+        + Update reminder
+        --
+        Collaborators:
+        TaskItem, NotificationManager
+    }
+}
+
+package "DRAWING TAB - Main View" {
+    class DrawingNotesView {
+        Responsibilities:
+        + List all drawings
+        + Create new drawing
+        + Delete drawings
+        --
+        Collaborators:
+        AddDrawingView, DrawingCanvasView
+        DrawingNote
+    }
+}
+
+package "DRAWING TAB - Sub-Views" {
+    class AddDrawingView {
+        Responsibilities:
+        + Create new drawing
+        + Use canvas for drawing
+        + Set title
+        --
+        Collaborators:
+        CanvasView, DrawingNote
+    }
+
+    class DrawingCanvasView {
+        Responsibilities:
+        + Display drawing
+        + Edit drawing
+        + Export as PDF
+        + Share drawing
+        --
+        Collaborators:
+        CanvasView, DrawingNote
+    }
+
+    class CanvasView {
+        Responsibilities:
+        + Provide drawing interface
+        + Manage PencilKit tools
+        + Handle tool picker
+        --
+        Collaborators:
+        PKCanvasView, PKToolPicker
+    }
+}
+
+package "SCHEDULE TAB - Main View" {
+    class ScheduleView {
+        Responsibilities:
+        + List all courses
+        + Create new course
+        + Delete courses
+        + Navigate to details
+        --
+        Collaborators:
+        AddCourseView, CourseDetailView
+        EditCourseView, CalendarManager
+    }
+}
+
+package "SCHEDULE TAB - Sub-Views" {
+    class AddCourseView {
+        Responsibilities:
+        + Create new course
+        + Set days/times
+        + Set instructor & location
+        + Optional calendar sync
+        --
+        Collaborators:
+        CalendarManager, Course
+    }
+
+    class CourseDetailView {
+        Responsibilities:
+        + Display course details
+        + Navigate to edit
+        --
+        Collaborators:
+        EditCourseView, Course
+    }
+
+    class EditCourseView {
+        Responsibilities:
+        + Edit course details
+        + Modify schedule
+        + Toggle calendar sync
+        --
+        Collaborators:
+        CalendarManager, Course
+    }
+}
+
+package "MANAGERS & SERVICES" {
+    class CalendarManager {
+        Responsibilities:
+        + Request calendar access
+        + Fetch calendar events
+        + Save tasks to calendar
+        + Create/delete recurring events
+        --
+        Collaborators:
+        Course, TaskItem, EventKit
+    }
+
+    class NotificationManager {
+        Responsibilities:
+        + Request permissions
+        + Schedule reminders
+        + Cancel reminders
+        --
+        Collaborators:
+        TaskItem
+    }
+
+    class NoteSaver {
+        Responsibilities:
+        + Validate note content
+        + Save or delete notes
+        --
+        Collaborators:
+        Note
+    }
+}
+
+package "DATA MODELS" {
+    class Folder
+    class Note
+    class TaskItem
+    class DrawingNote
+    class Course
+    class Home
+}
+
+' ============================================
+' TOP-LEVEL CONNECTIONS (App Flow)
+' ============================================
+TasklyApp --> ContentView: "initializes"
+
+ContentView --> HomeView: "tab 1"
+ContentView --> NotesView: "tab 2"
+ContentView --> CalendarView: "tab 3"
+ContentView --> DrawingNotesView: "tab 4"
+ContentView --> ScheduleView: "tab 5"
+
+' ============================================
+' NOTES TAB CONNECTIONS
+' ============================================
+NotesView --> AddNoteView: "creates"
+NotesView --> AddFolderView: "creates"
+NotesView --> NoteDetailView: "navigates"
+NotesView --> EditFolderView: "edits"
+
+NoteDetailView --> NoteSaver: "uses"
+AddNoteView --> NoteSaver: "uses"
+EditFolderView --> Folder: "modifies"
+
+' ============================================
+' CALENDAR TAB CONNECTIONS
+' ============================================
+CalendarView --> AddTaskView: "creates"
+CalendarView --> EditTaskView: "edits"
+
+AddTaskView --> CalendarManager: "uses"
+AddTaskView --> TaskItem: "manages"
+EditTaskView --> NotificationManager: "uses"
+EditTaskView --> TaskItem: "modifies"
+
+' ============================================
+' DRAWING TAB CONNECTIONS
+' ============================================
+DrawingNotesView --> AddDrawingView: "creates"
+DrawingNotesView --> DrawingCanvasView: "opens"
+
+AddDrawingView --> CanvasView: "uses"
+AddDrawingView --> DrawingNote: "saves"
+DrawingCanvasView --> CanvasView: "uses"
+DrawingCanvasView --> DrawingNote: "modifies"
+
+' ============================================
+' SCHEDULE TAB CONNECTIONS
+' ============================================
+ScheduleView --> AddCourseView: "creates"
+ScheduleView --> CourseDetailView: "opens"
+ScheduleView --> EditCourseView: "edits"
+
+AddCourseView --> CalendarManager: "uses"
+AddCourseView --> Course: "saves"
+EditCourseView --> CalendarManager: "uses"
+EditCourseView --> Course: "modifies"
+CourseDetailView --> EditCourseView: "navigates"
+
+' ============================================
+' HOME TAB CONNECTIONS
+' ============================================
+HomeView --> TaskItem: "displays"
+HomeView --> Note: "displays"
+HomeView --> Course: "displays"
+HomeView --> Home: "uses"
+
+' ============================================
+' MANAGER CONNECTIONS TO DATA
+' ============================================
+CalendarManager --> TaskItem: "syncs"
+CalendarManager --> Course: "syncs"
+NotificationManager --> TaskItem: "schedules"
+NoteSaver --> Note: "persists"
+
+@enduml
